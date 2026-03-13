@@ -1,0 +1,2588 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Cobertura - Paraguay</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #0f3460 0%, #e94560 100%);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .sidebar {
+            flex: 1;
+            min-width: 420px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .map-container {
+            flex: 2;
+            min-width: 400px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .filters {
+            margin-bottom: 20px;
+        }
+
+        .filters h3 {
+            margin-bottom: 15px;
+            color: #e94560;
+            font-size: 1.2rem;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #aaa;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-group select:hover {
+            border-color: #e94560;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #e94560;
+            box-shadow: 0 0 10px rgba(233,69,96,0.3);
+        }
+
+        .filter-group select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .data-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .tab-btn:hover {
+            background: rgba(233,69,96,0.3);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(90deg, #e94560, #0f3460);
+            box-shadow: 0 4px 15px rgba(233,69,96,0.4);
+        }
+
+        #map {
+            height: 500px;
+            border-radius: 10px;
+            z-index: 1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(233,69,96,0.3);
+        }
+
+        .stat-card .label {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #e94560;
+        }
+
+        .legend {
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            border-radius: 10px;
+            color: #333;
+            margin-top: 15px;
+            max-width: 100%;
+        }
+
+        .legend h4 {
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .legend-scale {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        .legend-scale span {
+            display: inline-block;
+            width: 30px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        .info-box {
+            background: rgba(233,69,96,0.2);
+            border-left: 4px solid #e94560;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .info-box h4 {
+            color: #e94560;
+            margin-bottom: 10px;
+        }
+
+        .info-box p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #ccc;
+        }
+
+        /* Tarjeta de región flotante */
+        .region-card {
+            position: fixed;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            width: 350px;
+            background: linear-gradient(145deg, rgba(26, 26, 46, 0.98), rgba(15, 52, 96, 0.98));
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(233, 69, 96, 0.2);
+            z-index: 1000;
+            display: none;
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50%) translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(-50%) translateX(0);
+            }
+        }
+
+        .region-card.active {
+            display: block;
+        }
+
+        .region-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(233, 69, 96, 0.3);
+        }
+
+        .region-card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .region-card-title .region-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .region-card-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #fff;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .region-card-close:hover {
+            background: #e94560;
+            transform: rotate(90deg);
+        }
+
+        .region-card-section {
+            margin-bottom: 20px;
+        }
+
+        .region-card-section-title {
+            font-size: 0.9rem;
+            color: #e94560;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .region-card-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .region-card-stat {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .region-card-stat:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .region-card-stat .label {
+            font-size: 0.75rem;
+            color: #aaa;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .region-card-stat .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .region-card-stat.highlight {
+            background: rgba(233, 69, 96, 0.2);
+            border: 1px solid rgba(233, 69, 96, 0.3);
+        }
+
+        .region-card-stat.highlight .value {
+            color: #e94560;
+        }
+
+        .region-card-indicator {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .region-card-indicator:last-child {
+            border-bottom: none;
+        }
+
+        .region-card-indicator .label {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .region-card-indicator .value {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .region-card-indicator .bar {
+            width: 80px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .region-card-indicator .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .region-card-indicator .percentage {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #e94560;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .region-card-indicators {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .region-card {
+                width: calc(100% - 40px);
+                right: 20px;
+                left: 20px;
+                top: auto;
+                bottom: 20px;
+                transform: none;
+            }
+        }
+
+        /* Análisis Comparativo - Nuevo Menú */
+        .analysis-menu {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .analysis-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 20px;
+            border: 2px solid rgba(233, 69, 96, 0.5);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .analysis-btn:hover {
+            background: rgba(233, 69, 96, 0.2);
+            border-color: #e94560;
+            transform: translateY(-2px);
+        }
+
+        .analysis-btn.active {
+            background: linear-gradient(90deg, #e94560, #0f3460);
+            border-color: #e94560;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+        }
+
+        .analysis-btn .icon {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        /* Panels de Análisis */
+        .analysis-panel {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .analysis-panel.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .analysis-panel h3 {
+            color: #e94560;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid rgba(233, 69, 96, 0.3);
+            padding-bottom: 10px;
+        }
+
+        /* Tabla comparativa */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.85rem;
+        }
+
+        .comparison-table th {
+            background: rgba(233, 69, 96, 0.2);
+            color: #fff;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e94560;
+        }
+
+        .comparison-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ddd;
+        }
+
+        .comparison-table tr:hover td {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .comparison-table .highlight {
+            color: #e94560;
+            font-weight: 700;
+        }
+
+        /* Mapa de alertas - Semáforo */
+        #map-alertas {
+            height: 400px;
+            border-radius: 10px;
+            margin-top: 15px;
+            z-index: 1;
+        }
+
+        /* Mapa de metas - Semáforo */
+        #map-metas {
+            height: 400px;
+            border-radius: 10px;
+            margin-top: 15px;
+            z-index: 1;
+        }
+
+        .alert-legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .alert-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-legend-item .dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .alert-legend-item .dot.green { background: #27ae60; }
+        .alert-legend-item .dot.yellow { background: #f1c40f; }
+        .alert-legend-item .dot.red { background: #e74c3c; }
+
+        /* Gráfico de comparación de años */
+        .year-comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .year-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .year-card:hover {
+            transform: translateY(-5px);
+            border-color: #e94560;
+            box-shadow: 0 5px 20px rgba(233, 69, 96, 0.3);
+        }
+
+        .year-card .year {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #e94560;
+            margin-bottom: 15px;
+        }
+
+        .year-card .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .year-card .stat:last-child {
+            border-bottom: none;
+        }
+
+        .year-card .stat .label {
+            color: #aaa;
+            font-size: 0.85rem;
+        }
+
+        .year-card .stat .value {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* Alerts Panel */
+        .alerts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .alert-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+            border-left: 4px solid;
+        }
+
+        .alert-card.green { border-left-color: #27ae60; }
+        .alert-card.yellow { border-left-color: #f1c40f; }
+        .alert-card.red { border-left-color: #e74c3c; }
+
+        .alert-card:hover {
+            transform: translateX(5px);
+        }
+
+        .alert-card .region-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-card .alert-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .alert-card .alert-indicator:last-child {
+            border-bottom: none;
+        }
+
+        .alert-card .alert-indicator .label {
+            flex: 1;
+            color: #aaa;
+        }
+
+        .alert-card .alert-indicator .value {
+            font-weight: 600;
+        }
+
+        .alert-card .alert-indicator .badge {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .alert-card .alert-indicator .badge.green {
+            background: rgba(39, 174, 96, 0.2);
+            color: #27ae60;
+        }
+
+        .alert-card .alert-indicator .badge.yellow {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+        }
+
+        .alert-card .alert-indicator .badge.red {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #e94560;
+        }
+
+        .loading::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: rgba(26,26,46,0.95);
+            color: #fff;
+            border-radius: 10px;
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(26,26,46,0.95);
+        }
+
+        .popup-content {
+            min-width: 200px;
+        }
+
+        .popup-content h4 {
+            color: #e94560;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 5px;
+        }
+
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .popup-row:last-child {
+            border-bottom: none;
+        }
+
+        .popup-row .label {
+            color: #aaa;
+            font-size: 0.85rem;
+        }
+
+        .popup-row .value {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar, .map-container {
+                min-width: 100%;
+            }
+            
+            #map {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1> Panel de Cobertura y Depósito </h1>
+        <p>Visualización de Datos de Cobertura y Depósito del Programa PANI </p>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="filters">
+                <h3>📊 Filtros</h3>
+                
+                <div class="filter-group">
+                    <label for="tipo-dato">Tipo de Dato:</label>
+                    <select id="tipo-dato">
+                        <option value="todos">📈 Total Pais</option>
+                        <option value="ninos">👶 Niños/as</option>
+                        <option value="embarazadas">🤰 Embarazadas</option>
+                        <option value="ce">👦 Casos Excepcionales</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="año">Año:</label>
+                    <select id="año">
+                        <option value="TODOS">Todos los Años</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="mes">Mes:</label>
+                    <select id="mes">
+                        <option value="TODOS">Todos los Meses</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="region">Región:</label>
+                    <select id="region">
+                        <option value="TODOS">Todas las Regiones</option>
+                    </select>
+                </div>
+
+                <button id="clear-filters" style="width: 100%; padding: 10px; background: #e94560; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9rem; margin-top: 10px;">🗑️ Limpiar Filtros</button>
+            </div>
+
+            <!-- Nuevo Menú de Análisis Comparativo -->
+            <div class="filters" style="margin-top: 30px; border-top: 2px solid rgba(233, 69, 96, 0.3); padding-top: 20px;">
+                <h3>📈 Análisis Comparativo</h3>
+                
+                <div class="analysis-menu">
+                    <button class="analysis-btn" data-panel="none">
+                        <span class="icon">🗺️</span>
+                        Vista Principal
+                    </button>
+                    <button class="analysis-btn" data-panel="regiones">
+                        <span class="icon">📊</span>
+                        Comparar Regiones
+                    </button>
+                    <button class="analysis-btn" data-panel="años">
+                        <span class="icon">📅</span>
+                        Comparar Años
+                    </button>
+                    <button class="analysis-btn" data-panel="alertas">
+                        <span class="icon">🚨</span>
+                        Alertas
+                    </button>
+                    <button class="analysis-btn" data-panel="metas">
+                        <span class="icon">🎯</span>
+                        Metas
+                    </button>
+                </div>
+            </div>
+
+            <div class="legend">
+                <h4>Regiones Sanitarias</h4>
+                <div class="legend-scale" id="region-legend">
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <img src="LOGO INAN.png" alt="Logo INAN" style="max-width: 100%; height: auto; max-height: 80px;">
+                </div>
+            </div>
+        </aside>
+
+        <main class="map-container">
+            <!-- Panels de Análisis Comparativo (se muestran en el área del mapa) -->
+            <div class="analysis-panel" id="panel-regiones">
+                <h3>📊 Comparación entre Regiones</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Comparativa de todos los datos por región sanitaria</p>
+                <div id="tabla-regiones">
+                    <div class="loading">Cargando datos...</div>
+                </div>
+            </div>
+
+            <div class="analysis-panel" id="panel-años">
+                <h3>📅 Comparación entre Años</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Evolución de indicadores a lo largo de los años</p>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="region-comparacion">Región:</label>
+                    <select id="region-comparacion">
+                        <option value="TODOS">Todas las Regiones</option>
+                    </select>
+                </div>
+                <div id="tabla-años">
+                    <div class="loading">Cargando datos...</div>
+                </div>
+            </div>
+
+            <div class="analysis-panel" id="panel-alertas">
+                <h3>🚨 Indicadores de Alerta</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Mapa de alertas con efecto semáforo (Desnutrición, Riesgo de Desnutrición, Atrasos)</p>
+                <div id="map-alertas"></div>
+                <div class="alert-legend">
+                    <div class="alert-legend-item">
+                        <span class="dot green"></span>
+                        <span>Nivel Bajo (Normal)</span>
+                    </div>
+                    <div class="alert-legend-item">
+                        <span class="dot yellow"></span>
+                        <span>Nivel Medio (Precaución)</span>
+                    </div>
+                    <div class="alert-legend-item">
+                        <span class="dot red"></span>
+                        <span>Nivel Alto (Alerta)</span>
+                    </div>
+                </div>
+                <div id="alertas-detalle" style="margin-top: 20px;">
+                    <div class="loading">Cargando alertas...</div>
+                </div>
+            </div>
+
+            <div class="analysis-panel" id="panel-metas">
+                <h3>🎯 Cumplimiento de Metas</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Mapa de cumplimiento de metas según porcentaje de Niños y Embarazadas</p>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="meta-año">Año:</label>
+                    <select id="meta-año">
+                        <option value="TODOS">Todos los Años</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="meta-mes">Mes:</label>
+                    <select id="meta-mes">
+                        <option value="TODOS">Todos los Meses</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="meta-tipo">Tipo de Meta:</label>
+                    <select id="meta-tipo">
+                        <option value="combinada">Niños + Embarazadas (Combinada)</option>
+                        <option value="ninos">Solo Niños</option>
+                        <option value="embarazadas">Solo Embarazadas</option>
+                    </select>
+                </div>
+                <div id="map-metas"></div>
+                <div class="alert-legend">
+                    <div class="alert-legend-item">
+                        <span class="dot green"></span>
+                        <span>80%+ (Meta Cumplida)</span>
+                    </div>
+                    <div class="alert-legend-item">
+                        <span class="dot yellow"></span>
+                        <span>60-79% (En Proceso)</span>
+                    </div>
+                    <div class="alert-legend-item">
+                        <span class="dot red"></span>
+                        <span>0-59% (Por Debajo de Meta)</span>
+                    </div>
+                </div>
+                <div id="metas-detalle" style="margin-top: 20px;">
+                    <div class="loading">Cargando metas...</div>
+                </div>
+            </div>
+
+            <div id="map"></div>
+            
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card">
+                    <div class="label">Total Asistidos</div>
+                    <div class="value" id="total-asistidos">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Seguimiento</div>
+                    <div class="value" id="total-seguimiento">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Finalizados</div>
+                    <div class="value" id="total-finalizados">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Atrasos</div>
+                    <div class="value" id="total-atrasos">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Deserciones</div>
+                    <div class="value" id="total-deserciones">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Traslados Salida</div>
+                    <div class="value" id="t-salida">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Traslados Entrada</div>
+                    <div class="value" id="t-entrada">-</div>
+                </div>
+                <div class="stat-card" style="background: rgba(39, 174, 96, 0.15); border: 1px solid rgba(39, 174, 96, 0.3);">
+                    <div class="label" style="color: #27ae60;">Kilos Disponibles</div>
+                    <div class="value" style="color: #27ae60;" id="kilos-disponibles">-</div>
+                </div>
+                <div class="stat-card" style="background: rgba(52, 152, 219, 0.15); border: 1px solid rgba(52, 152, 219, 0.3);">
+                    <div class="label" style="color: #3498db;">Ingresos Nuevos</div>
+                    <div class="value" style="color: #3498db;" id="ingresos-nuevos">-</div>
+                </div>
+                <div class="stat-card" style="background: rgba(155, 89, 182, 0.15); border: 1px solid rgba(155, 89, 182, 0.3);">
+                    <div class="label" style="color: #9b59b6; display: block; margin-bottom: 10px;">% Meta Niños</div>
+                    <div class="value" style="color: #9b59b6; display: block; font-size: 2em; font-weight: bold;" id="meta-ninos">-</div>
+                </div>
+                <div class="stat-card" style="background: rgba(230, 126, 34, 0.15); border: 1px solid rgba(230, 126, 34, 0.3);">
+                    <div class="label" style="color: #e67e22; display: block; margin-bottom: 10px;">% Meta Embarazadas</div>
+                    <div class="value" style="color: #e67e22; display: block; font-size: 2em; font-weight: bold;" id="meta-embarazadas">-</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Tarjeta flotante de región -->
+    <div class="region-card" id="region-card">
+        <div class="region-card-header">
+            <div class="region-card-title">
+                <span class="region-color" id="card-region-color"></span>
+                <span id="card-region-name">Región</span>
+            </div>
+            <button class="region-card-close" id="card-close">&times;</button>
+        </div>
+        
+        <div class="region-card-section">
+            <div class="region-card-section-title">📊 Estadísticas Principales</div>
+            <div class="region-card-stats">
+                <div class="region-card-stat highlight">
+                    <span class="label">Total Asistidos</span>
+                    <span class="value" id="card-total-asistidos">0</span>
+                </div>
+                <div class="region-card-stat">
+                    <span class="label">Seguimiento</span>
+                    <span class="value" id="card-seguimiento">0</span>
+                </div>
+                <div class="region-card-stat">
+                    <span class="label">Finalizados</span>
+                    <span class="value" id="card-finalizados">0</span>
+                </div>
+                <div class="region-card-stat">
+                    <span class="label">Atrasos</span>
+                    <span class="value" id="card-atrasos">0</span>
+                </div>
+                <div class="region-card-stat">
+                    <span class="label">Deserciones</span>
+                    <span class="value" id="card-deserciones">0</span>
+                </div>
+                <div class="region-card-stat">
+                    <span class="label">Traslados</span>
+                    <span class="value" id="card-traslados">0</span>
+                </div>
+                <div class="region-card-stat" style="background: rgba(39, 174, 96, 0.2); border: 1px solid rgba(39, 174, 96, 0.3);">
+                    <span class="label" style="color: #27ae60;">Kilos Disponibles</span>
+                    <span class="value" style="color: #27ae60;" id="card-kilos">0</span>
+                </div>
+                <div class="region-card-stat" style="background: rgba(52, 152, 219, 0.2); border: 1px solid rgba(52, 152, 219, 0.3);">
+                    <span class="label" style="color: #3498db;">Ingresos Nuevos</span>
+                    <span class="value" style="color: #3498db;" id="card-nuevo-ingreso">0</span>
+                </div>
+                <div class="region-card-stat" style="background: rgba(155, 89, 182, 0.2); border: 1px solid rgba(155, 89, 182, 0.3);">
+                    <span class="label" style="color: #9b59b6;">% Meta Niños</span>
+                    <span class="value" style="color: #9b59b6;" id="card-meta-ninos">0%</span>
+                </div>
+                <div class="region-card-stat" style="background: rgba(230, 126, 34, 0.2); border: 1px solid rgba(230, 126, 34, 0.3);">
+                    <span class="label" style="color: #e67e22;">% Meta Embarazadas</span>
+                    <span class="value" style="color: #e67e22;" id="card-meta-embarazadas">0%</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="region-card-section">
+            <div class="region-card-section-title">📈 Indicadores Nutricionales</div>
+            <div id="card-indicators">
+                <!-- Se llenará dinámicamente según el tipo de dato -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map centered on Paraguay
+        const map = L.map('map').setView([-23.5, -58.0], 6);
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Color palette for each region (unique colors)
+        const regionColors = {
+            'PARAGUARÍ': '#e74c3c',      // Rojo
+            'MISIONES': '#3498db',       // Azul
+            'ITAPÚA': '#2ecc71',         // Verde
+            'ALTO PARAGUAY': '#9b59b6',  // Púrpura
+            'BOQUERÓN': '#f39c12',       // Naranja
+            'PRESIDENTE HAYES': '#1abc9c', // Turquesa
+            'CANINDEYÚ': '#e67e22',      // Naranja oscuro
+            'AMAMBAY': '#34495e',        // Gris oscuro
+            'ÑEEMBUCÚ': '#c0392b',       // Rojo oscuro
+            'CAAZAPÁ': '#16a085',        // Verde azulado
+            'CENTRAL': '#8e44ad',        // Violeta
+            'CAAGUAZÚ': '#f1c40f',       // Amarillo
+            'GUAIRÁ': '#d35400',         // Naranja intenso
+            'ALTO PARANÁ': '#27ae60',    // Verde intenso
+            'CORDILLERA': '#2980b9',     // Azul oscuro
+            'SAN PEDRO': '#e91e63',      // Rosa
+            'CONCEPCIÓN': '#00bcd4',     // Cyan
+            'ASUNCIÓN': '#2c3e50'        // Azul muy oscuro
+        };
+
+        // Get unique color for each region
+        function getRegionColor(regionName) {
+            // Handle special characters and variations
+            const normalizedName = regionName.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            
+            // Map variations to our color keys
+            const nameMappings = {
+                'PARAGUARI': 'PARAGUARÍ',
+                'MISIONES': 'MISIONES',
+                'ITAPUA': 'ITAPÚA',
+                'ALTO PARAGUAY': 'ALTO PARAGUAY',
+                'BOQUERON': 'BOQUERÓN',
+                'PRESIDENTE HAYES': 'PRESIDENTE HAYES',
+                'CANINDEYU': 'CANINDEYÚ',
+                'AMAMBAY': 'AMAMBAY',
+                'ÑEEMBUCU': 'ÑEEMBUCÚ',
+                'CAAZAPA': 'CAAZAPÁ',
+                'CENTRAL': 'CENTRAL',
+                'CAAGUAZU': 'CAAGUAZÚ',
+                'GUAIRA': 'GUAIRÁ',
+                'ALTO PARANA': 'ALTO PARANÁ',
+                'CORDILLERA': 'CORDILLERA',
+                'SAN PEDRO': 'SAN PEDRO',
+                'CONCEPCION': 'CONCEPCIÓN',
+                'ASUNCION': 'ASUNCIÓN'
+            };
+            
+            const mappedName = nameMappings[normalizedName] || normalizedName;
+            return regionColors[mappedName] || '#95a5a6';
+        }
+
+        // Color scale function (for indicators)
+        function getColor(value, min, max) {
+            if (value === null || value === undefined || isNaN(value)) return '#ccc';
+            
+            const ratio = (value - min) / (max - min);
+            
+            if (ratio < 0.2) return '#fee5d9';
+            if (ratio < 0.4) return '#fcae91';
+            if (ratio < 0.6) return '#fb6a4a';
+            if (ratio < 0.8) return '#de2d26';
+            return '#a50f15';
+        }
+
+        // Current data state
+        let currentData = {};
+        let geoJsonLayer = null;
+        
+        // Store totals for meta calculation
+        let totalMetaNiños = 0;
+        let totalMetaEmbarazadas = 0;
+        let totalAsistidosNiños = 0;
+        let totalAsistidosEmbarazadas = 0;
+        let currentTipo = 'ninos';
+        let depositoData = {};
+        
+        // Indicadores por tipo de dato
+        const indicadoresPorTipo = {
+            ninos: [
+                { value: 'TOTAL_ASISTIDO', label: 'Total Asistidos' },
+                { value: 'DESNUTRICION', label: 'Desnutrición' },
+                { value: 'RIESGO_DESNUTRICION', label: 'Riesgo Desnutrición' },
+                { value: 'ADECUADO', label: 'Adecuado' },
+                { value: 'SOBREPESO', label: 'Sobrepeso' },
+                { value: 'OBESIDAD', label: 'Obesidad' },
+                { value: 'SEGUIMIENTO', label: 'Seguimiento' },
+                { value: 'FINALIZADOS', label: 'Finalizados' }
+            ],
+            embarazadas: [
+                { value: 'TOTAL_ASISTIDO', label: 'Total Asistidos' },
+                { value: 'BAJO_PESO', label: 'Bajo Peso' },
+                { value: 'ADECUADO', label: 'Adecuado' },
+                { value: 'SOBREPESO', label: 'Sobrepeso' },
+                { value: 'OBESIDAD', label: 'Obesidad' },
+                { value: 'SEGUIMIENTO', label: 'Seguimiento' },
+                { value: 'FINALIZADOS', label: 'Finalizados' }
+            ],
+            ce: [
+                { value: 'TOTAL_ASISTIDO', label: 'Total Asistidos' },
+                { value: 'NUEVO_INGRESO', label: 'Nuevo Ingreso' },
+                { value: 'SEGUIMIENTO', label: 'Seguimiento' },
+                { value: 'FINALIZADOS', label: 'Finalizados' }
+            ],
+            todos: [
+                { value: 'TOTAL_ASISTIDO', label: 'Total Asistidos' },
+                { value: 'SEGUIMIENTO', label: 'Seguimiento' },
+                { value: 'FINALIZADOS', label: 'Finalizados' },
+                { value: 'ATRASOS', label: 'Atrasos' },
+                { value: 'DESERCIONES', label: 'Deserciones' }
+            ]
+        };
+
+        // Load GeoJSON (using real geographic shapes)
+        async function loadGeoJSON() {
+            try {
+                const response = await fetch('regiones_paraguay.geojson');
+                const geojson = await response.json();
+                return geojson;
+            } catch (error) {
+                console.error('Error loading GeoJSON:', error);
+                return null;
+            }
+        }
+        
+        // Generate region legend
+        function generateRegionLegend() {
+            const legendContainer = document.getElementById('region-legend');
+            legendContainer.innerHTML = '';
+            
+            const regions = Object.keys(regionColors);
+            // Create a 2-column grid layout with proper spacing
+            let html = '<div style="display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 80px; row-gap: 8px;">';
+            regions.forEach(region => {
+                const color = regionColors[region];
+                html += `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="background: ${color}; width: 20px; height: 16px; border-radius: 3px; flex-shrink: 0;"></span>
+                        <span style="font-size: 0.72rem; color: #333; white-space: nowrap;">${region}</span>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            legendContainer.innerHTML = html;
+        }
+
+        // Load filter options from API
+        async function loadFilters() {
+            try {
+                // Load años
+                const añosRes = await fetch('/api/años');
+                const años = await añosRes.json();
+                const añoSelect = document.getElementById('año');
+                añoSelect.innerHTML = '<option value="TODOS">Todos los Años</option>';
+                años.forEach(año => {
+                    añoSelect.innerHTML += `<option value="${año}">${año}</option>`;
+                });
+
+                // Load meses
+                const mesesRes = await fetch('/api/meses');
+                const meses = await mesesRes.json();
+                const mesSelect = document.getElementById('mes');
+                mesSelect.innerHTML = '<option value="TODOS">Todos los Meses</option>';
+                meses.forEach(mes => {
+                    mesSelect.innerHTML += `<option value="${mes}">${mes}</option>`;
+                });
+
+                // Load regiones
+                const regionesRes = await fetch('/api/regiones');
+                const regiones = await regionesRes.json();
+                const regionSelect = document.getElementById('region');
+                regionSelect.innerHTML = '<option value="TODOS">Todas las Regiones</option>';
+                regiones.forEach(region => {
+                    regionSelect.innerHTML += `<option value="${region}">${region}</option>`;
+                });
+                
+                // Load años for metas panel
+                const metaAñoSelect = document.getElementById('meta-año');
+                metaAñoSelect.innerHTML = '<option value="TODOS">Todos los Años</option>';
+                años.forEach(año => {
+                    metaAñoSelect.innerHTML += `<option value="${año}">${año}</option>`;
+                });
+                
+                // Load meses for metas panel
+                const metaMesSelect = document.getElementById('meta-mes');
+                metaMesSelect.innerHTML = '<option value="TODOS">Todos los Meses</option>';
+                meses.forEach(mes => {
+                    metaMesSelect.innerHTML += `<option value="${mes}">${mes}</option>`;
+                });
+                
+                // Add event listeners for metas filters
+                document.getElementById('meta-año').addEventListener('change', loadMetas);
+                document.getElementById('meta-mes').addEventListener('change', loadMetas);
+                document.getElementById('meta-tipo').addEventListener('change', loadMetas);
+                
+                // Load deposito data
+                await loadDepositoData();
+            } catch (error) {
+                console.error('Error loading filters:', error);
+            }
+        }
+        
+        // Load deposito data
+        async function loadDepositoData(region = 'TODOS') {
+            try {
+                const res = await fetch(`/api/deposito?region=${region}`);
+                depositoData = await res.json();
+                console.log('Deposito data loaded for region:', region, Object.keys(depositoData));
+            } catch (error) {
+                console.error('Error loading deposito:', error);
+            }
+        }
+
+        // Fetch data from API
+        async function fetchData() {
+            const tipoDato = document.getElementById('tipo-dato').value;
+            const año = document.getElementById('año').value;
+            const mes = document.getElementById('mes').value;
+            const region = document.getElementById('region').value;
+            
+            currentTipo = tipoDato;
+            
+            // Load deposito data with current region filter
+            await loadDepositoData(region);
+            
+            try {
+                let data = [];
+                
+                if (tipoDato === 'todos') {
+                    // Fetch data from all three types and combine
+                    const [ninosData, embarazadasData, ceData] = await Promise.all([
+                        fetch(`/api/ninos/resumen?año=${año}&mes=${mes}&region=${region}`).then(r => r.json()),
+                        fetch(`/api/embarazadas/resumen?año=${año}&mes=${mes}&region=${region}`).then(r => r.json()),
+                        fetch(`/api/ce/resumen?año=${año}&mes=${mes}&region=${region}`).then(r => r.json())
+                    ]);
+                    
+                    // Combine data from all types
+                    const combinedData = {};
+                    
+                    ninosData.forEach(item => {
+                        if (!combinedData[item.REGION]) {
+                            combinedData[item.REGION] = { 
+                                REGION: item.REGION, 
+                                TOTAL_ASISTIDO: 0,
+                                SEGUIMIENTO: 0,
+                                FINALIZADOS: 0,
+                                ATRASOS: 0,
+                                DESERCIONES: 0,
+                                T_SALIDA: 0,
+                                T_ENTRADA: 0,
+                                NUEVO_INGRESO: 0,
+                                META_NIÑOS: 0,
+                                NUEVO_INGRESO_NIÑOS: 0,
+                                META_EMBARAZADAS: 0,
+                                NUEVO_INGRESO_EMBARAZADAS: 0
+                            };
+                        }
+                        // Ensure the fields exist
+                        if (!combinedData[item.REGION].META_NIÑOS) combinedData[item.REGION].META_NIÑOS = 0;
+                        if (!combinedData[item.REGION].NUEVO_INGRESO_NIÑOS) combinedData[item.REGION].NUEVO_INGRESO_NIÑOS = 0;
+                        if (!combinedData[item.REGION].META_EMBARAZADAS) combinedData[item.REGION].META_EMBARAZADAS = 0;
+                        if (!combinedData[item.REGION].NUEVO_INGRESO_EMBARAZADAS) combinedData[item.REGION].NUEVO_INGRESO_EMBARAZADAS = 0;
+                        
+                        combinedData[item.REGION].TOTAL_ASISTIDO += (item.TOTAL_ASISTIDO || 0);
+                        combinedData[item.REGION].SEGUIMIENTO += (item.SEGUIMIENTO || 0);
+                        combinedData[item.REGION].FINALIZADOS += (item.FINALIZADOS || 0);
+                        combinedData[item.REGION].ATRASOS += (item.ATRASOS || 0);
+                        combinedData[item.REGION].DESERCIONES += (item.DESERCIONES || 0);
+                        combinedData[item.REGION].T_SALIDA += (item.T_SALIDA || 0);
+                        combinedData[item.REGION].T_ENTRADA += (item.T_ENTRADA || 0);
+                        combinedData[item.REGION].NUEVO_INGRESO += (item.NUEVO_INGRESO || 0);
+                        combinedData[item.REGION].META_NIÑOS += (item.META || 0);
+                        combinedData[item.REGION].NUEVO_INGRESO_NIÑOS += (item.NUEVO_INGRESO || 0);
+                    });
+                    
+                    embarazadasData.forEach(item => {
+                        if (!combinedData[item.REGION]) {
+                            combinedData[item.REGION] = { 
+                                REGION: item.REGION, 
+                                TOTAL_ASISTIDO: 0,
+                                SEGUIMIENTO: 0,
+                                FINALIZADOS: 0,
+                                ATRASOS: 0,
+                                DESERCIONES: 0,
+                                T_SALIDA: 0,
+                                T_ENTRADA: 0,
+                                NUEVO_INGRESO: 0,
+                                META_NIÑOS: 0,
+                                NUEVO_INGRESO_NIÑOS: 0,
+                                META_EMBARAZADAS: 0,
+                                NUEVO_INGRESO_EMBARAZADAS: 0
+                            };
+                        }
+                        // Ensure the fields exist
+                        if (!combinedData[item.REGION].META_EMBARAZADAS) combinedData[item.REGION].META_EMBARAZADAS = 0;
+                        if (!combinedData[item.REGION].NUEVO_INGRESO_EMBARAZADAS) combinedData[item.REGION].NUEVO_INGRESO_EMBARAZADAS = 0;
+                        
+                        combinedData[item.REGION].TOTAL_ASISTIDO += (item.TOTAL_ASISTIDO || 0);
+                        combinedData[item.REGION].SEGUIMIENTO += (item.SEGUIMIENTO || 0);
+                        combinedData[item.REGION].FINALIZADOS += (item.FINALIZADOS || 0);
+                        combinedData[item.REGION].ATRASOS += (item.ATRASOS || 0);
+                        combinedData[item.REGION].DESERCIONES += (item.DESERCIONES || 0);
+                        combinedData[item.REGION].T_SALIDA += (item.T_SALIDA || 0);
+                        combinedData[item.REGION].T_ENTRADA += (item.T_ENTRADA || 0);
+                        combinedData[item.REGION].NUEVO_INGRESO += (item.NUEVO_INGRESO || 0);
+                        combinedData[item.REGION].META_EMBARAZADAS += (item.META || 0);
+                        combinedData[item.REGION].NUEVO_INGRESO_EMBARAZADAS += (item.NUEVO_INGRESO || 0);
+                    });
+                    
+                    ceData.forEach(item => {
+                        if (!combinedData[item.REGION]) {
+                            combinedData[item.REGION] = { 
+                                REGION: item.REGION, 
+                                TOTAL_ASISTIDO: 0,
+                                SEGUIMIENTO: 0,
+                                FINALIZADOS: 0,
+                                ATRASOS: 0,
+                                DESERCIONES: 0,
+                                T_SALIDA: 0,
+                                T_ENTRADA: 0,
+                                NUEVO_INGRESO: 0
+                            };
+                        }
+                        combinedData[item.REGION].TOTAL_ASISTIDO += (item.TOTAL_ASISTIDO || 0);
+                        combinedData[item.REGION].SEGUIMIENTO += (item.SEGUIMIENTO || 0);
+                        combinedData[item.REGION].FINALIZADOS += (item.FINALIZADOS || 0);
+                        combinedData[item.REGION].ATRASOS += (item.ATRASOS || 0);
+                        combinedData[item.REGION].DESERCIONES += (item.DESERCIONES || 0);
+                        combinedData[item.REGION].T_SALIDA += (item.T_SALIDA || 0);
+                        combinedData[item.REGION].T_ENTRADA += (item.T_ENTRADA || 0);
+                        combinedData[item.REGION].NUEVO_INGRESO += (item.NUEVO_INGRESO || 0);
+                    });
+                    
+                    data = Object.values(combinedData);
+                } else {
+                    const endpoint = `/api/${tipoDato}/resumen?año=${año}&mes=${mes}&region=${region}`;
+                    const response = await fetch(endpoint);
+                    data = await response.json();
+                }
+                
+                // Convert to dictionary by region
+                currentData = {};
+                
+                // Reset totals for meta calculation
+                totalMetaNiños = 0;
+                totalMetaEmbarazadas = 0;
+                totalAsistidosNiños = 0;
+                totalAsistidosEmbarazadas = 0;
+                
+                // Calculate totals for meta percentage
+                data.forEach(item => {
+                    currentData[item.REGION] = item;
+                    
+                    // Add to totals based on tipoDato
+                    if (tipoDato === 'todos') {
+                        totalMetaNiños += (item.META_NIÑOS || 0);
+                        totalMetaEmbarazadas += (item.META_EMBARAZADAS || 0);
+                        totalAsistidosNiños += (item.NUEVO_INGRESO_NIÑOS || 0);
+                        totalAsistidosEmbarazadas += (item.NUEVO_INGRESO_EMBARAZADAS || 0);
+                    } else if (tipoDato === 'ninos') {
+                        totalMetaNiños += (item.META || 0);
+                        totalAsistidosNiños += (item.NUEVO_INGRESO || 0);
+                    } else if (tipoDato === 'embarazadas') {
+                        totalMetaEmbarazadas += (item.META || 0);
+                        totalAsistidosEmbarazadas += (item.NUEVO_INGRESO || 0);
+                    }
+                });
+                
+                // Update map
+                await updateMap();
+                
+                // Update stats
+                updateStats(data);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Update map with data
+        async function updateMap() {
+            const indicador = 'TOTAL_ASISTIDO';
+            const selectedRegion = document.getElementById('region').value;
+            const geojson = await loadGeoJSON();
+            
+            if (!geojson) return;
+            
+            // Calculate min/max for color scale
+            let values = Object.values(currentData).map(d => d[indicador] || 0);
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            
+            // Remove existing layer
+            if (geoJsonLayer) {
+                map.removeLayer(geoJsonLayer);
+            }
+            
+            // Style function
+            function style(feature) {
+                const regionName = feature.properties.dpto_desc;
+                const regionData = currentData[regionName];
+                const value = regionData ? (regionData[indicador] || 0) : 0;
+                
+                // Check if this region should be highlighted (if a specific region is selected)
+                const isSelectedRegion = selectedRegion !== 'TODOS' && regionName === selectedRegion;
+                const isOtherRegion = selectedRegion !== 'TODOS' && regionName !== selectedRegion;
+                
+                return {
+                    fillColor: getRegionColor(regionName),
+                    weight: isSelectedRegion ? 5 : 2,
+                    opacity: isOtherRegion ? 0.3 : 1,
+                    color: isSelectedRegion ? '#fff' : '#2c3e50',
+                    dashArray: '',
+                    fillOpacity: isSelectedRegion ? 0.9 : (isOtherRegion ? 0.2 : 0.7)
+                };
+            }
+            
+            // Highlight function
+            function highlightFeature(e) {
+                const layer = e.target;
+                const regionName = layer.feature.properties.dpto_desc;
+                const regionData = currentData[regionName];
+                
+                layer.setStyle({
+                    weight: 5,
+                    color: '#fff',
+                    dashArray: '',
+                    fillOpacity: 0.9
+                });
+                
+                if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                    layer.bringToFront();
+                }
+            }
+            
+            // Reset highlight
+            function resetHighlight(e) {
+                geoJsonLayer.resetStyle(e.target);
+            }
+            
+            // Click function - show region card
+            function showRegionCard(e) {
+                const regionName = e.target.feature.properties.dpto_desc;
+                
+                // Try to find region data with different name formats
+                let regionData = currentData[regionName];
+                
+                // If not found, try to find with normalized name
+                if (!regionData) {
+                    const normalizedName = regionName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                    
+                    // Map of GeoJSON names to API names
+                    const nameMappings = {
+                        'PRESIDENTE HAYES': ['PRESIDENTE HAYES', 'PRESIDENTEHAYES'],
+                        'ALTO PARAGUAY': ['ALTO PARAGUAY', 'ALTOPARAGUAY'],
+                        'BOQUERON': ['BOQUERON', 'BOQUERÓN'],
+                        'ITAPUA': ['ITAPUA', 'ITAPÚA'],
+                        'CANINDEYU': ['CANINDEYU', 'CANINDEYÚ'],
+                        'ÑEEMBUCU': ['ÑEEMBUCU', 'ÑEEMBUCÚ'],
+                        'CAAZAPA': ['CAAZAPA', 'CAAZAPÁ'],
+                        'CAAGUAZU': ['CAAGUAZU', 'CAAGUAZÚ'],
+                        'GUAIRA': ['GUAIRA', 'GUAIRÁ'],
+                        'ALTO PARANA': ['ALTO PARANA', 'ALTO PARANÁ', 'ALTOPARANA'],
+                        'PARAGUARI': ['PARAGUARI', 'PARAGUARÍ'],
+                        'CONCEPCION': ['CONCEPCION', 'CONCEPCIÓN'],
+                        'ASUNCION': ['ASUNCION', 'ASUNCIÓN', 'CAPITAL']
+                    };
+                    
+                    // Try mapped names first
+                    const mappedNames = nameMappings[normalizedName] || [normalizedName];
+                    
+                    for (const mappedName of mappedNames) {
+                        for (const key of Object.keys(currentData)) {
+                            const keyNormalized = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                            if (keyNormalized === mappedName || keyNormalized.includes(mappedName) || mappedName.includes(keyNormalized)) {
+                                regionData = currentData[key];
+                                break;
+                            }
+                        }
+                        if (regionData) break;
+                    }
+                }
+                
+                const regionColor = getRegionColor(regionName);
+                
+                // Update card header
+                document.getElementById('card-region-name').textContent = regionName;
+                document.getElementById('card-region-color').style.backgroundColor = regionColor;
+                document.getElementById('card-region-color').style.color = regionColor;
+                
+                // Update basic stats
+                if (regionData) {
+                    document.getElementById('card-total-asistidos').textContent = (regionData.TOTAL_ASISTIDO || 0).toLocaleString();
+                    document.getElementById('card-seguimiento').textContent = (regionData.SEGUIMIENTO || 0).toLocaleString();
+                    document.getElementById('card-finalizados').textContent = (regionData.FINALIZADOS || 0).toLocaleString();
+                    document.getElementById('card-atrasos').textContent = (regionData.ATRASOS || 0).toLocaleString();
+                    document.getElementById('card-deserciones').textContent = (regionData.DESERCIONES || 0).toLocaleString();
+                    
+                    const tSalida = regionData.T_SALIDA || 0;
+                    const tEntrada = regionData.T_ENTRADA || 0;
+                    document.getElementById('card-traslados').textContent = (tSalida + tEntrada).toLocaleString();
+                    
+                    // Get kilos disponibles from deposito data
+                    let kilosDisponibles = 0;
+                    
+                    // Try to find matching region in deposito data
+                    const normalizedRegionName = regionName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                    
+                    const depositoMappings = {
+                        'PRESIDENTE HAYES': ['PRESIDENTE HAYES', 'PRESIDENTEHAYES'],
+                        'ALTO PARAGUAY': ['ALTO PARAGUAY', 'ALTOPARAGUAY'],
+                        'BOQUERON': ['BOQUERON', 'BOQUERÓN'],
+                        'ITAPUA': ['ITAPUA', 'ITAPÚA'],
+                        'CANINDEYU': ['CANINDEYU', 'CANINDEYÚ'],
+                        'ÑEEMBUCU': ['ÑEEMBUCU', 'ÑEEMBUCÚ'],
+                        'CAAZAPA': ['CAAZAPA', 'CAAZAPÁ'],
+                        'CAAGUAZU': ['CAAGUAZU', 'CAAGUAZÚ'],
+                        'GUAIRA': ['GUAIRA', 'GUAIRÁ'],
+                        'ALTO PARANA': ['ALTO PARANA', 'ALTO PARANÁ', 'ALTOPARANA'],
+                        'PARAGUARI': ['PARAGUARI', 'PARAGUARÍ'],
+                        'CONCEPCION': ['CONCEPCION', 'CONCEPCIÓN'],
+                        'ASUNCION': ['ASUNCION', 'ASUNCIÓN', 'CAPITAL']
+                    };
+                    
+                    const mappedNames = depositoMappings[normalizedRegionName] || [normalizedRegionName];
+                    
+                    for (const key of Object.keys(depositoData)) {
+                        const keyNormalized = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                        for (const mappedName of mappedNames) {
+                            if (keyNormalized === mappedName || keyNormalized.includes(mappedName) || mappedName.includes(keyNormalized)) {
+                                kilosDisponibles = depositoData[key];
+                                break;
+                            }
+                        }
+                        if (kilosDisponibles > 0) break;
+                    }
+                    
+                    document.getElementById('card-kilos').textContent = (kilosDisponibles || 0).toLocaleString();
+                    
+                    // Update nuevo ingreso
+                    document.getElementById('card-nuevo-ingreso').textContent = (regionData.NUEVO_INGRESO || 0).toLocaleString();
+                    
+                    // Update meta percentages - use region specific data or totals from all filtered regions
+                    let pctMetaNinos, pctMetaEmbarazadas;
+                    
+                    if (regionData) {
+                        // Use region specific data
+                        const metaNinos = regionData.META_NIÑOS || regionData.META || 0;
+                        const nuevoIngresoNinos = regionData.NUEVO_INGRESO_NIÑOS || regionData.NUEVO_INGRESO || 0;
+                        const metaEmbarazadas = regionData.META_EMBARAZADAS || 0;
+                        const nuevoIngresoEmbarazadas = regionData.NUEVO_INGRESO_EMBARAZADAS || 0;
+                        
+                        pctMetaNinos = metaNinos > 0 ? ((nuevoIngresoNinos / metaNinos) * 100).toFixed(1) : '0.0';
+                        pctMetaEmbarazadas = metaEmbarazadas > 0 ? ((nuevoIngresoEmbarazadas / metaEmbarazadas) * 100).toFixed(1) : '0.0';
+                    } else {
+                        // Use totals from all filtered regions
+                        pctMetaNinos = totalMetaNiños > 0 ? ((totalAsistidosNiños / totalMetaNiños) * 100).toFixed(1) : '0.0';
+                        pctMetaEmbarazadas = totalMetaEmbarazadas > 0 ? ((totalAsistidosEmbarazadas / totalMetaEmbarazadas) * 100).toFixed(1) : '0.0';
+                    }
+                    
+                    document.getElementById('card-meta-ninos').textContent = pctMetaNinos + '%';
+                    document.getElementById('card-meta-embarazadas').textContent = pctMetaEmbarazadas + '%';
+                    
+                    // Show/hide meta fields based on tipo
+                    const metaNinosEl = document.getElementById('card-meta-ninos').parentElement;
+                    const metaEmbarazadasEl = document.getElementById('card-meta-embarazadas').parentElement;
+                    
+                    if (currentTipo === 'todos') {
+                        metaNinosEl.style.display = 'flex';
+                        metaEmbarazadasEl.style.display = 'flex';
+                    } else if (currentTipo === 'ninos') {
+                        metaNinosEl.style.display = 'flex';
+                        metaEmbarazadasEl.style.display = 'none';
+                    } else if (currentTipo === 'embarazadas') {
+                        metaNinosEl.style.display = 'none';
+                        metaEmbarazadasEl.style.display = 'flex';
+                    } else {
+                        // ce or other types - hide both
+                        metaNinosEl.style.display = 'none';
+                        metaEmbarazadasEl.style.display = 'none';
+                    }
+                    
+                    // Update indicators based on current tipo
+                    updateCardIndicators(regionData);
+                } else {
+                    document.getElementById('card-total-asistidos').textContent = '0';
+                    document.getElementById('card-seguimiento').textContent = '0';
+                    document.getElementById('card-finalizados').textContent = '0';
+                    document.getElementById('card-atrasos').textContent = '0';
+                    document.getElementById('card-deserciones').textContent = '0';
+                    document.getElementById('card-traslados').textContent = '0';
+                    document.getElementById('card-kilos').textContent = '0';
+                    document.getElementById('card-nuevo-ingreso').textContent = '0';
+                    document.getElementById('card-meta-ninos').textContent = '0%';
+                    document.getElementById('card-meta-embarazadas').textContent = '0%';
+                    
+                    // Hide meta fields when no data
+                    document.getElementById('card-meta-ninos').parentElement.style.display = 'none';
+                    document.getElementById('card-meta-embarazadas').parentElement.style.display = 'none';
+                    
+                    document.getElementById('card-indicators').innerHTML = '<p style="color: #aaa; text-align: center;">Sin datos disponibles</p>';
+                }
+                
+                // Show card
+                document.getElementById('region-card').classList.add('active');
+                
+                // Zoom to region
+                map.fitBounds(e.target.getBounds());
+            }
+            
+            // Update card indicators based on tipo
+            function updateCardIndicators(regionData) {
+                const indicatorsContainer = document.getElementById('card-indicators');
+                const tipo = currentTipo;
+                
+                let html = '';
+                
+                if (tipo === 'todos') {
+                    // Total país - sin indicadores nutricionales
+                    indicatorsContainer.innerHTML = '<p style="color: #aaa; text-align: center; padding: 10px;">📊 Seleccione un tipo de dato para ver indicadores nutricionales</p>';
+                    return;
+                } else if (tipo === 'ninos') {
+                    // Niños/as - indicadores nutricionales
+                    const indicators = [
+                        { value: 'DESNUTRICION', label: 'Desnutrición' },
+                        { value: 'RIESGO_DESNUTRICION', label: 'Riesgo Desnutrición' },
+                        { value: 'ADECUADO', label: 'Adecuado' },
+                        { value: 'SOBREPESO', label: 'Sobrepeso' },
+                        { value: 'OBESIDAD', label: 'Obesidad' }
+                    ];
+                    
+                    // Calcular suma total de los indicadores
+                    const sumIndicators = indicators.reduce((sum, ind) => sum + (regionData[ind.value] || 0), 0);
+                    const total = sumIndicators || 1;
+                    
+                    html += '<div class="region-card-indicators">';
+                    
+                    indicators.forEach(ind => {
+                        const value = regionData[ind.value] || 0;
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        const barColor = getBarColor(percentage, true);
+                        
+                        html += `
+                            <div class="region-card-indicator">
+                                <span class="label">${ind.label}</span>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span class="value">${value.toLocaleString()}</span>
+                                    <span class="percentage">${percentage}%</span>
+                                    <div class="bar">
+                                        <div class="bar-fill" style="width: ${percentage}%; background: ${barColor};"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    
+                } else if (tipo === 'embarazadas') {
+                    // Embarazadas - indicadores nutricionales
+                    const indicators = [
+                        { value: 'BAJO_PESO', label: 'Bajo Peso' },
+                        { value: 'ADECUADO', label: 'Adecuado' },
+                        { value: 'SOBREPESO', label: 'Sobrepeso' },
+                        { value: 'OBESIDAD', label: 'Obesidad' }
+                    ];
+                    
+                    // Calcular suma total de los indicadores
+                    const sumIndicators = indicators.reduce((sum, ind) => sum + (regionData[ind.value] || 0), 0);
+                    const total = sumIndicators || 1;
+                    
+                    html += '<div class="region-card-indicators">';
+                    
+                    indicators.forEach(ind => {
+                        const value = regionData[ind.value] || 0;
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        const barColor = getBarColor(percentage, true);
+                        
+                        html += `
+                            <div class="region-card-indicator">
+                                <span class="label">${ind.label}</span>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span class="value">${value.toLocaleString()}</span>
+                                    <span class="percentage">${percentage}%</span>
+                                    <div class="bar">
+                                        <div class="bar-fill" style="width: ${percentage}%; background: ${barColor};"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    
+                } else if (tipo === 'ce') {
+                    // Casos Excepcionales - Ingresos Nuevos
+                    const nuevoIngreso = regionData.NUEVO_INGRESO || 0;
+                    
+                    html += '<div class="region-card-indicators">';
+                    html += `
+                        <div class="region-card-indicator">
+                            <span class="label">Nuevo Ingreso</span>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span class="value">${nuevoIngreso.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    `;
+                    html += '</div>';
+                }
+                
+                indicatorsContainer.innerHTML = html;
+            }
+            
+            // Get bar color based on percentage (for nutritional indicators)
+            function getBarColor(percentage, isNutritional = false) {
+                const p = parseFloat(percentage);
+                if (isNutritional) {
+                    // For nutritional: green is good, red is bad
+                    if (p < 15) return '#27ae60';  // Good - low malnutrition
+                    if (p < 30) return '#f1c40f';  // Warning
+                    if (p < 50) return '#e67e22';  // Alert
+                    return '#e74c3c';  // High
+                }
+                // For general: green is high, red is low
+                if (p < 20) return '#27ae60';
+                if (p < 40) return '#f1c40f';
+                if (p < 60) return '#e67e22';
+                return '#e74c3c';
+            }
+            
+            // Close card
+            function closeRegionCard() {
+                document.getElementById('region-card').classList.remove('active');
+            }
+            
+            // Add event listener to close button
+            document.getElementById('card-close').addEventListener('click', closeRegionCard);
+            
+            // Popup function - disabled in favor of region card
+            function onEachFeature(feature, layer) {
+                const regionName = feature.properties.dpto_desc;
+                
+                layer.on({
+                    mouseover: highlightFeature,
+                    mouseout: resetHighlight,
+                    click: showRegionCard
+                });
+            }
+            
+            // Add GeoJSON layer
+            geoJsonLayer = L.geoJson(geojson, {
+                style: style,
+                onEachFeature: onEachFeature
+            }).addTo(map);
+        }
+
+        // Update statistics
+        function updateStats(data) {
+            const totalAsistidos = data.reduce((sum, d) => sum + (d.TOTAL_ASISTIDO || 0), 0);
+            const totalSeguimiento = data.reduce((sum, d) => sum + (d.SEGUIMIENTO || 0), 0);
+            const totalFinalizados = data.reduce((sum, d) => sum + (d.FINALIZADOS || 0), 0);
+            const totalAtrasos = data.reduce((sum, d) => sum + (d.ATRASOS || 0), 0);
+            const totalDeserciones = data.reduce((sum, d) => sum + (d.DESERCIONES || 0), 0);
+            const totalTSalida = data.reduce((sum, d) => sum + (d.T_SALIDA || 0), 0);
+            const totalTEntrada = data.reduce((sum, d) => sum + (d.T_ENTRADA || 0), 0);
+            const totalIngresosNuevos = data.reduce((sum, d) => sum + (d.NUEVO_INGRESO || 0), 0);
+            
+            document.getElementById('total-asistidos').textContent = totalAsistidos.toLocaleString();
+            document.getElementById('total-seguimiento').textContent = totalSeguimiento.toLocaleString();
+            document.getElementById('total-finalizados').textContent = totalFinalizados.toLocaleString();
+            document.getElementById('total-atrasos').textContent = totalAtrasos.toLocaleString();
+            document.getElementById('total-deserciones').textContent = totalDeserciones.toLocaleString();
+            document.getElementById('t-salida').textContent = totalTSalida.toLocaleString();
+            document.getElementById('t-entrada').textContent = totalTEntrada.toLocaleString();
+            document.getElementById('ingresos-nuevos').textContent = totalIngresosNuevos.toLocaleString();
+            
+            // Calculate meta percentages
+            const totalMetaNiños = data.reduce((sum, d) => sum + (d.META_NIÑOS || d.META || 0), 0);
+            const totalMetaEmbarazadas = data.reduce((sum, d) => sum + (d.META_EMBARAZADAS || d.META || 0), 0);
+            const totalNuevoIngresoNiños = data.reduce((sum, d) => sum + (d.NUEVO_INGRESO_NIÑOS || d.NUEVO_INGRESO || 0), 0);
+            const totalNuevoIngresoEmbarazadas = data.reduce((sum, d) => sum + (d.NUEVO_INGRESO_EMBARAZADAS || d.NUEVO_INGRESO || 0), 0);
+            
+            const pctMetaNiños = totalMetaNiños > 0 ? ((totalNuevoIngresoNiños / totalMetaNiños) * 100).toFixed(1) : '0.0';
+            const pctMetaEmbarazadas = totalMetaEmbarazadas > 0 ? ((totalNuevoIngresoEmbarazadas / totalMetaEmbarazadas) * 100).toFixed(1) : '0.0';
+            
+            document.getElementById('meta-ninos').textContent = pctMetaNiños + '%';
+            document.getElementById('meta-embarazadas').textContent = pctMetaEmbarazadas + '%';
+            
+            // Show/hide meta fields based on tipo
+            const metaNinosEl = document.getElementById('meta-ninos').parentElement;
+            const metaEmbarazadasEl = document.getElementById('meta-embarazadas').parentElement;
+            
+            if (currentTipo === 'todos') {
+                metaNinosEl.style.display = 'flex';
+                metaEmbarazadasEl.style.display = 'flex';
+            } else if (currentTipo === 'ninos') {
+                metaNinosEl.style.display = 'flex';
+                metaEmbarazadasEl.style.display = 'none';
+            } else if (currentTipo === 'embarazadas') {
+                metaNinosEl.style.display = 'none';
+                metaEmbarazadasEl.style.display = 'flex';
+            } else {
+                // ce or other types - hide both
+                metaNinosEl.style.display = 'none';
+                metaEmbarazadasEl.style.display = 'none';
+            }
+            
+            // Calculate kilos disponibles from depositoData
+            let kilosDisponibles = 0;
+            const selectedRegion = document.getElementById('region').value;
+            
+            if (selectedRegion !== 'TODOS') {
+                // If a specific region is selected, get that region's stock
+                // Try to find matching region in deposito data
+                const normalizedRegionName = selectedRegion.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                
+                const depositoMappings = {
+                    'PRESIDENTE HAYES': ['PRESIDENTE HAYES', 'PRESIDENTEHAYES'],
+                    'ALTO PARAGUAY': ['ALTO PARAGUAY', 'ALTOPARAGUAY'],
+                    'BOQUERON': ['BOQUERON', 'BOQUERÓN'],
+                    'ITAPUA': ['ITAPUA', 'ITAPÚA'],
+                    'CANINDEYU': ['CANINDEYU', 'CANINDEYÚ'],
+                    'ÑEEMBUCU': ['ÑEEMBUCU', 'ÑEEMBUCÚ'],
+                    'CAAZAPA': ['CAAZAPA', 'CAAZAPÁ'],
+                    'CAAGUAZU': ['CAAGUAZU', 'CAAGUAZÚ'],
+                    'GUAIRA': ['GUAIRA', 'GUAIRÁ'],
+                    'ALTO PARANA': ['ALTO PARANA', 'ALTO PARANÁ', 'ALTOPARANA'],
+                    'PARAGUARI': ['PARAGUARI', 'PARAGUARÍ'],
+                    'CONCEPCION': ['CONCEPCION', 'CONCEPCIÓN'],
+                    'ASUNCION': ['ASUNCION', 'ASUNCIÓN', 'CAPITAL']
+                };
+                
+                const mappedNames = depositoMappings[normalizedRegionName] || [normalizedRegionName];
+                
+                for (const key of Object.keys(depositoData)) {
+                    const keyNormalized = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                    for (const mappedName of mappedNames) {
+                        if (keyNormalized === mappedName || keyNormalized.includes(mappedName) || mappedName.includes(keyNormalized)) {
+                            kilosDisponibles = depositoData[key];
+                            break;
+                        }
+                    }
+                    if (kilosDisponibles > 0) break;
+                }
+            } else {
+                // If "TODOS" is selected, sum all regions
+                Object.values(depositoData).forEach(value => {
+                    kilosDisponibles += value || 0;
+                });
+            }
+            
+            document.getElementById('kilos-disponibles').textContent = kilosDisponibles.toLocaleString();
+        }
+
+        // Event listeners
+        document.getElementById('tipo-dato').addEventListener('change', fetchData);
+
+        document.getElementById('año').addEventListener('change', fetchData);
+        document.getElementById('mes').addEventListener('change', fetchData);
+        document.getElementById('region').addEventListener('change', fetchData);
+
+        // Botón limpiar filtros
+        document.getElementById('clear-filters').addEventListener('click', function() {
+            document.getElementById('tipo-dato').value = 'todos';
+            document.getElementById('año').value = 'TODOS';
+            document.getElementById('mes').value = 'TODOS';
+            document.getElementById('region').value = 'TODOS';
+            fetchData();
+        });
+
+        // ========== ANÁLISIS COMPARATIVO ==========
+        let mapAlertas = null;
+        let geoJsonLayerAlertas = null;
+        let mapMetas = null;
+        let geoJsonLayerMetas = null;
+        
+        // Análisis comparativo - manejo de botones
+        document.querySelectorAll('.analysis-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const panel = this.getAttribute('data-panel');
+                
+                // Update active button
+                document.querySelectorAll('.analysis-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Hide all panels
+                document.getElementById('panel-regiones').classList.remove('active');
+                document.getElementById('panel-años').classList.remove('active');
+                document.getElementById('panel-alertas').classList.remove('active');
+                document.getElementById('panel-metas').classList.remove('active');
+                
+                // Show selected panel or map
+                if (panel === 'none') {
+                    // Volver al mapa principal
+                    document.getElementById('map').style.display = 'block';
+                    document.querySelector('.stats-grid').style.display = 'grid';
+                } else if (panel === 'regiones') {
+                    document.getElementById('panel-regiones').classList.add('active');
+                    document.getElementById('map').style.display = 'none';
+                    document.querySelector('.stats-grid').style.display = 'none';
+                    await loadComparacionRegiones();
+                } else if (panel === 'años') {
+                    document.getElementById('panel-años').classList.add('active');
+                    document.getElementById('map').style.display = 'none';
+                    document.querySelector('.stats-grid').style.display = 'none';
+                    await loadComparacionAños();
+                } else if (panel === 'alertas') {
+                    document.getElementById('panel-alertas').classList.add('active');
+                    document.getElementById('map').style.display = 'none';
+                    document.querySelector('.stats-grid').style.display = 'none';
+                    await loadAlertas();
+                } else if (panel === 'metas') {
+                    document.getElementById('panel-metas').classList.add('active');
+                    document.getElementById('map').style.display = 'none';
+                    document.querySelector('.stats-grid').style.display = 'none';
+                    await loadMetas();
+                }
+            });
+        });
+
+        // Cargar comparación entre regiones
+        async function loadComparacionRegiones() {
+            const año = document.getElementById('año').value;
+            const mes = document.getElementById('mes').value;
+            const container = document.getElementById('tabla-regiones');
+            
+            try {
+                const response = await fetch(`/api/comparacion/regiones?año=${año}&mes=${mes}&tipo=todos`);
+                const data = await response.json();
+                
+                if (Object.keys(data).length === 0) {
+                    container.innerHTML = '<p style="color: #aaa;">No hay datos disponibles</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Región</th>
+                                <th>Total Asistidos</th>
+                                <th>Desnutrición</th>
+                                <th>Riesgo Desp.</th>
+                                <th>Adecuado</th>
+                                <th>Sobrepeso</th>
+                                <th>Obesidad</th>
+                                <th>Seguimiento</th>
+                                <th>Finalizados</th>
+                                <th>Atrasos</th>
+                                <th>Deserciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                // Sort by total asistido
+                const sortedRegions = Object.entries(data).sort((a, b) => 
+                    (b[1].TOTAL_ASISTIDO || 0) - (a[1].TOTAL_ASISTIDO || 0)
+                );
+                
+                for (const [region, valores] of sortedRegions) {
+                    const color = getRegionColor(region);
+                    html += `
+                        <tr>
+                            <td style="font-weight: 600; color: ${color};">${region}</td>
+                            <td class="highlight">${(valores.TOTAL_ASISTIDO || 0).toLocaleString()}</td>
+                            <td>${(valores.DESNUTRICION || 0).toLocaleString()}</td>
+                            <td>${(valores.RIESGO_DESNUTRICION || 0).toLocaleString()}</td>
+                            <td>${(valores.ADECUADO || 0).toLocaleString()}</td>
+                            <td>${(valores.SOBREPESO || 0).toLocaleString()}</td>
+                            <td>${(valores.OBESIDAD || 0).toLocaleString()}</td>
+                            <td>${(valores.SEGUIMIENTO || 0).toLocaleString()}</td>
+                            <td>${(valores.FINALIZADOS || 0).toLocaleString()}</td>
+                            <td>${(valores.ATRASOS || 0).toLocaleString()}</td>
+                            <td>${(valores.DESERCIONES || 0).toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading comparación regiones:', error);
+                container.innerHTML = '<p style="color: #e94560;">Error al cargar datos</p>';
+            }
+        }
+
+        // Cargar comparación entre años
+        async function loadComparacionAños() {
+            const region = document.getElementById('region-comparacion').value;
+            const container = document.getElementById('tabla-años');
+            
+            try {
+                const response = await fetch(`/api/comparacion/años?region=${region}&tipo=ninos`);
+                const data = await response.json();
+                
+                if (Object.keys(data).length === 0) {
+                    container.innerHTML = '<p style="color: #aaa;">No hay datos disponibles</p>';
+                    return;
+                }
+                
+                // Get all years sorted
+                const years = Object.keys(data).sort();
+                
+                let html = '<div class="year-comparison-grid">';
+                
+                for (const año of years) {
+                    const valores = data[año];
+                    html += `
+                        <div class="year-card">
+                            <div class="year">${año}</div>
+                            <div class="stat">
+                                <span class="label">Total Asistidos</span>
+                                <span class="value highlight">${(valores.TOTAL_ASISTIDO || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="stat">
+                                <span class="label">Desnutrición</span>
+                                <span class="value">${(valores.DESNUTRICION || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="stat">
+                                <span class="label">Riesgo Desp.</span>
+                                <span class="value">${(valores.RIESGO_DESNUTRICION || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="stat">
+                                <span class="label">Seguimiento</span>
+                                <span class="value">${(valores.SEGUIMIENTO || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="stat">
+                                <span class="label">Atrasos</span>
+                                <span class="value">${(valores.ATRASOS || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="stat">
+                                <span class="label">Nuevos Ingresos</span>
+                                <span class="value">${(valores.NUEVO_INGRESO || 0).toLocaleString()}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += '</div>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading comparación años:', error);
+                container.innerHTML = '<p style="color: #e94560;">Error al cargar datos</p>';
+            }
+        }
+
+        // Cargar alertas con mapa de semáforo
+        async function loadAlertas() {
+            const año = document.getElementById('año').value;
+            const mes = document.getElementById('mes').value;
+            const container = document.getElementById('alertas-detalle');
+            
+            try {
+                const response = await fetch(`/api/alertas?año=${año}&mes=${mes}`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p style="color: #aaa;">No hay datos disponibles</p>';
+                    return;
+                }
+                
+                // Sort by overall alert (red first)
+                data.sort((a, b) => b.overall_alert - a.overall_alert);
+                
+                let html = '<div class="alerts-grid">';
+                
+                for (const item of data) {
+                    const alertClass = item.overall_alert === 2 ? 'red' : (item.overall_alert === 1 ? 'yellow' : 'green');
+                    const alertColor = item.overall_alert === 2 ? '#e74c3c' : (item.overall_alert === 1 ? '#f1c40f' : '#27ae60');
+                    
+                    html += `
+                        <div class="alert-card ${alertClass}">
+                            <div class="region-name">
+                                <span class="region-color" style="background: ${getRegionColor(item.region)};"></span>
+                                ${item.region}
+                            </div>
+                            <div class="alert-indicator">
+                                <span class="label">Desnutridos</span>
+                                <span class="value">${item.desnutricion.toLocaleString()}</span>
+                                <span class="badge ${item.alert_desnutricion === 2 ? 'red' : (item.alert_desnutricion === 1 ? 'yellow' : 'green')}">
+                                    ${item.pct_desnutricion}%
+                                </span>
+                            </div>
+                            <div class="alert-indicator">
+                                <span class="label">Riesgo Desp.</span>
+                                <span class="value">${item.riesgo.toLocaleString()}</span>
+                                <span class="badge ${item.alert_riesgo === 2 ? 'red' : (item.alert_riesgo === 1 ? 'yellow' : 'green')}">
+                                    ${item.pct_riesgo}%
+                                </span>
+                            </div>
+                            <div class="alert-indicator">
+                                <span class="label">Atrasos</span>
+                                <span class="value">${item.atrasos.toLocaleString()}</span>
+                                <span class="badge ${item.alert_atrasos === 2 ? 'red' : (item.alert_atrasos === 1 ? 'yellow' : 'green')}">
+                                    ${item.pct_atrasos}%
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += '</div>';
+                container.innerHTML = html;
+                
+                // Initialize alerts map
+                await initAlertasMap(data);
+                
+            } catch (error) {
+                console.error('Error loading alertas:', error);
+                container.innerHTML = '<p style="color: #e94560;">Error al cargar datos</p>';
+            }
+        }
+
+        // Initialize alerts map with traffic light colors
+        async function initAlertasMap(alertasData) {
+            // Wait for DOM to be ready
+            setTimeout(async () => {
+                // Initialize map if not already done
+                if (!mapAlertas) {
+                    mapAlertas = L.map('map-alertas').setView([-23.5, -58.0], 6);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(mapAlertas);
+                }
+                
+                const geojson = await loadGeoJSON();
+                if (!geojson) return;
+                
+                // Convert alertas data to dictionary
+                const alertasDict = {};
+                alertasData.forEach(item => {
+                    alertasDict[item.region] = item;
+                });
+                
+                // Remove existing layer
+                if (geoJsonLayerAlertas) {
+                    mapAlertas.removeLayer(geoJsonLayerAlertas);
+                }
+                
+                // Get alert color based on level
+                function getAlertColor(alertLevel) {
+                    if (alertLevel === 2) return '#e74c3c'; // Red
+                    if (alertLevel === 1) return '#f1c40f'; // Yellow
+                    return '#27ae60'; // Green
+                }
+                
+                // Style function for alert map
+                function style(feature) {
+                    const regionName = feature.properties.dpto_desc;
+                    
+                    // Try to find matching region
+                    let matchedRegion = null;
+                    const normalizedName = regionName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                    
+                    const nameMappings = {
+                        'PRESIDENTE HAYES': ['PRESIDENTE HAYES', 'PRESIDENTEHAYES'],
+                        'ALTO PARAGUAY': ['ALTO PARAGUAY', 'ALTOPARAGUAY'],
+                        'BOQUERON': ['BOQUERON', 'BOQUERÓN'],
+                        'ITAPUA': ['ITAPUA', 'ITAPÚA'],
+                        'CANINDEYU': ['CANINDEYU', 'CANINDEYÚ'],
+                        'ÑEEMBUCU': ['ÑEEMBUCU', 'ÑEEMBUCÚ'],
+                        'CAAZAPA': ['CAAZAPA', 'CAAZAPÁ'],
+                        'CAAGUAZU': ['CAAGUAZU', 'CAAGUAZÚ'],
+                        'GUAIRA': ['GUAIRA', 'GUAIRÁ'],
+                        'ALTO PARANA': ['ALTO PARANA', 'ALTO PARANÁ'],
+                        'PARAGUARI': ['PARAGUARI', 'PARAGUARÍ'],
+                        'CONCEPCION': ['CONCEPCION', 'CONCEPCIÓN'],
+                        'ASUNCION': ['ASUNCION', 'ASUNCIÓN', 'CAPITAL']
+                    };
+                    
+                    for (const [key, variants] of Object.entries(nameMappings)) {
+                        if (variants.some(v => normalizedName.includes(v) || v.includes(normalizedName))) {
+                            matchedRegion = key;
+                            break;
+                        }
+                    }
+                    
+                    const alertData = alertasDict[matchedRegion] || alertasDict[regionName];
+                    const alertLevel = alertData ? alertData.overall_alert : 0;
+                    const alertColor = getAlertColor(alertLevel);
+                    
+                    return {
+                        fillColor: alertColor,
+                        weight: 2,
+                        opacity: 1,
+                        color: '#2c3e50',
+                        dashArray: '',
+                        fillOpacity: 0.7
+                    };
+                }
+                
+                // Info control
+                const info = L.control();
+                
+                info.onAdd = function(map) {
+                    this._div = L.DomUtil.create('div', 'info');
+                    this._div.innerHTML = '<h4>Alertas Nutricionales</h4>';
+                    return this._div;
+                };
+                
+                info.addTo(mapAlertas);
+                
+                // Create GeoJSON layer
+                geoJsonLayerAlertas = L.geoJSON(geojson, {
+                    style: style,
+                    onEachFeature: function(feature, layer) {
+                        const regionName = feature.properties.dpto_desc;
+                        
+                        // Try to find matching region
+                        let matchedRegion = null;
+                        const normalizedName = regionName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                        
+                        const nameMappings = {
+                            'PRESIDENTE HAYES': ['PRESIDENTE HAYES', 'PRESIDENTEHAYES'],
+                            'ALTO PARAGUAY': ['ALTO PARAGUAY', 'ALTOPARAGUAY'],
+                            'BOQUERON': ['BOQUERON', 'BOQUERÓN'],
+                            'ITAPUA': ['ITAPUA', 'ITAPÚA'],
+                            'CANINDEYU': ['CANINDEYU', 'CANINDEYÚ'],
+                            'ÑEEMBUCU': ['ÑEEMBUCU', 'ÑEEMBUCÚ'],
+                            'CAAZAPA': ['CAAZAPA', 'CAAZAPÁ'],
+                            'CAAGUAZU': ['CAAGUAZU', 'CAAGUAZÚ'],
+                            'GUAIRA': ['GUAIRA', 'GUAIRÁ'],
+                            'ALTO PARANA': ['ALTO PARANA', 'ALTO PARANÁ'],
+                            'PARAGUARI': ['PARAGUARI', 'PARAGUARÍ'],
+                            'CONCEPCION': ['CONCEPCION', 'CONCEPCIÓN'],
+                            'ASUNCION': ['ASUNCION', 'ASUNCIÓN', 'CAPITAL']
+                        };
+                        
+                        for (const [key, variants] of Object.entries(nameMappings)) {
+                            if (variants.some(v => normalizedName.includes(v) || v.includes(normalizedName))) {
+                                matchedRegion = key;
+                                break;
+                            }
+                        }
+                        
+                        const alertData = alertasDict[matchedRegion] || alertasDict[regionName];
+                        
+                        let popupContent = `<h4>${regionName}</h4>`;
+                        if (alertData) {
+                            popupContent += `
+                                <div class="popup-row"><span class="label">Desnutridos:</span><span class="value">${alertData.desnutricion.toLocaleString()} (${alertData.pct_desnutricion}%)</span></div>
+                                <div class="popup-row"><span class="label">Riesgo Desp.:</span><span class="value">${alertData.riesgo.toLocaleString()} (${alertData.pct_riesgo}%)</span></div>
+                                <div class="popup-row"><span class="label">Atrasos:</span><span class="value">${alertData.atrasos.toLocaleString()} (${alertData.pct_atrasos}%)</span></div>
+                            `;
+                        } else {
+                            popupContent += '<p>Sin datos</p>';
+                        }
+                        
+                        layer.bindPopup(popupContent);
+                    }
+                }).addTo(mapAlertas);
+                
+                // Invalidate map size
+                mapAlertas.invalidateSize();
+                
+            }, 100);
+        }
+
+        // Cargar metas con mapa de semáforo
+        async function loadMetas() {
+            const año = document.getElementById('meta-año').value;
+            const mes = document.getElementById('meta-mes').value;
+            const tipo = document.getElementById('meta-tipo').value;
+            const container = document.getElementById('metas-detalle');
+            
+            try {
+                const response = await fetch(`/api/metas?año=${año}&mes=${mes}&tipo=${tipo}`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p style="color: #aaa;">No hay datos disponibles</p>';
+                    return;
+                }
+                
+                // Sort by alert level (red first)
+                data.sort((a, b) => b.alert_level - a.alert_level);
+                
+                let html = '<div class="alerts-grid">';
+                
+                for (const item of data) {
+                    const alertClass = item.alert_level === 2 ? 'red' : (item.alert_level === 1 ? 'yellow' : 'green');
+                    const alertColor = item.alert_level === 2 ? '#e74c3c' : (item.alert_level === 1 ? '#f1c40f' : '#27ae60');
+                    const statusText = item.alert_level === 2 ? 'Por Debajo de Meta' : (item.alert_level === 1 ? 'En Proceso' : 'Meta Cumplida');
+                    
+                    html += `
+                        <div class="alert-card ${alertClass}">
+                            <div class="region-name">
+                                <span class="region-color" style="background: ${getRegionColor(item.region)};"></span>
+                                ${item.region}
+                            </div>
+                            <div class="alert-indicator">
+                                <span class="label">Estado</span>
+                                <span class="badge ${alertClass}">${statusText}</span>
+                            </div>
+                            <div class="alert-indicator">
+                                <span class="label">% Cumplimiento</span>
+                                <span class="value" style="font-size: 1.2em; font-weight: bold;">${item.pct_cumplimiento}%</span>
+                            </div>
+                            <div class="alert-indicator">
+                                <span class="label">Nuevos Ingresos</span>
+                                <span class="value">${item.nuevo_ingreso.toLocaleString()}</span>
+                            </div>
+                            <div class="alert-indicator">
+                                <span class="label">Meta</span>
+                                <span class="value">${item.meta.toLocaleString()}</span>
+                            </div>
+                            <div class="alert-indicator" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2);">
+                                <span class="label" style="font-size: 0.8em;">Niños: ${item.pct_ninos}% | Embarazadas: ${item.pct_embarazadas}%</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += '</div>';
+                container.innerHTML = html;
+                
+                // Initialize metas map
+                await initMetasMap(data);
+                
+            } catch (error) {
+                console.error('Error loading metas:', error);
+                container.innerHTML = '<p style="color: #e94560;">Error al cargar datos</p>';
+            }
+        }
+
+        // Initialize metas map with traffic light colors
+        async function initMetasMap(metasData) {
+            // Wait for DOM to be ready
+            setTimeout(async () => {
+                // Initialize map if not already done
+                if (!mapMetas) {
+                    mapMetas = L.map('map-metas').setView([-23.5, -58.0], 6);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(mapMetas);
+                }
+                
+                const geojson = await loadGeoJSON();
+                if (!geojson) return;
+                
+                // Convert metas data to dictionary
+                const metasDict = {};
+                metasData.forEach(item => {
+                    metasDict[item.region] = item;
+                });
+                
+                // Remove existing layer
+                if (geoJsonLayerMetas) {
+                    mapMetas.removeLayer(geoJsonLayerMetas);
+                }
+                
+                // Get meta color based on percentage
+                function getMetaColor(pct) {
+                    if (pct >= 80) return '#27ae60'; // Green
+                    if (pct >= 60) return '#f1c40f'; // Yellow
+                    return '#e74c3c'; // Red
+                }
+                
+                // Style function for metas map
+                function style(feature) {
+                    const regionName = feature.properties.dpto_desc;
+                    
+                    // Try to find matching region
+                    let matchedRegion = null;
+                    const normalizedName = regionName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                    
+                    const nameMappings = {
+                        'PRESIDENTE HAYES': ['PRESIDENTE HAYES', 'PRESIDENTEHAYES'],
+                        'ALTO PARAGUAY': ['ALTO PARAGUAY', 'ALTOPARAGUAY'],
+                        'BOQUERON': ['BOQUERON', 'BOQUERÓN'],
+                        'ITAPUA': ['ITAPUA', 'ITAPÚA'],
+                        'CANINDEYU': ['CANINDEYU', 'CANINDEYÚ'],
+                        'ÑEEMBUCU': ['ÑEEMBUCU', 'ÑEEMBUCÚ'],
+                        'CAAZAPA': ['CAAZAPA', 'CAAZAPÁ'],
+                        'CAAGUAZU': ['CAAGUAZU', 'CAAGUAZÚ'],
+                        'GUAIRA': ['GUAIRA', 'GUAIRÁ'],
+                        'ALTO PARANA': ['ALTO PARANA', 'ALTO PARANÁ'],
+                        'PARAGUARI': ['PARAGUARI', 'PARAGUARÍ'],
+                        'CONCEPCION': ['CONCEPCION', 'CONCEPCIÓN'],
+                        'ASUNCION': ['ASUNCION', 'ASUNCIÓN', 'CAPITAL']
+                    };
+                    
+                    for (const [key, variants] of Object.entries(nameMappings)) {
+                        if (variants.some(v => normalizedName.includes(v) || v.includes(normalizedName))) {
+                            matchedRegion = key;
+                            break;
+                        }
+                    }
+                    
+                    const metaData = metasDict[matchedRegion] || metasDict[regionName];
+                    const pctCumplimiento = metaData ? metaData.pct_cumplimiento : 0;
+                    const metaColor = getMetaColor(pctCumplimiento);
+                    
+                    return {
+                        fillColor: metaColor,
+                        weight: 2,
+                        opacity: 1,
+                        color: '#2c3e50',
+                        dashArray: '',
+                        fillOpacity: 0.7
+                    };
+                }
+                
+                // Info control
+                const info = L.control();
+                
+                info.onAdd = function(map) {
+                    this._div = L.DomUtil.create('div', 'info');
+                    this._div.innerHTML = '<h4>Cumplimiento de Metas</h4>';
+                    return this._div;
+                };
+                
+                info.addTo(mapMetas);
+                
+                // Create GeoJSON layer
+                geoJsonLayerMetas = L.geoJSON(geojson, {
+                    style: style,
+                    onEachFeature: function(feature, layer) {
+                        const regionName = feature.properties.dpto_desc;
+                        
+                        // Try to find matching region
+                        let matchedRegion = null;
+                        const normalizedName = regionName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                        
+                        const nameMappings = {
+                            'PRESIDENTE HAYES': ['PRESIDENTE HAYES', 'PRESIDENTEHAYES'],
+                            'ALTO PARAGUAY': ['ALTO PARAGUAY', 'ALTOPARAGUAY'],
+                            'BOQUERON': ['BOQUERON', 'BOQUERÓN'],
+                            'ITAPUA': ['ITAPUA', 'ITAPÚA'],
+                            'CANINDEYU': ['CANINDEYU', 'CANINDEYÚ'],
+                            'ÑEEMBUCU': ['ÑEEMBUCU', 'ÑEEMBUCÚ'],
+                            'CAAZAPA': ['CAAZAPA', 'CAAZAPÁ'],
+                            'CAAGUAZU': ['CAAGUAZU', 'CAAGUAZÚ'],
+                            'GUAIRA': ['GUAIRA', 'GUAIRÁ'],
+                            'ALTO PARANA': ['ALTO PARANA', 'ALTO PARANÁ'],
+                            'PARAGUARI': ['PARAGUARI', 'PARAGUARÍ'],
+                            'CONCEPCION': ['CONCEPCION', 'CONCEPCIÓN'],
+                            'ASUNCION': ['ASUNCION', 'ASUNCIÓN', 'CAPITAL']
+                        };
+                        
+                        for (const [key, variants] of Object.entries(nameMappings)) {
+                            if (variants.some(v => normalizedName.includes(v) || v.includes(normalizedName))) {
+                                matchedRegion = key;
+                                break;
+                            }
+                        }
+                        
+                        const metaData = metasDict[matchedRegion] || metasDict[regionName];
+                        
+                        let popupContent = `<h4>${regionName}</h4>`;
+                        if (metaData) {
+                            const statusText = metaData.alert_level === 2 ? 'Por Debajo de Meta' : (metaData.alert_level === 1 ? 'En Proceso' : 'Meta Cumplida');
+                            popupContent += `
+                                <div class="popup-row"><span class="label">Estado:</span><span class="value">${statusText}</span></div>
+                                <div class="popup-row"><span class="label">% Cumplimiento:</span><span class="value">${metaData.pct_cumplimiento}%</span></div>
+                                <div class="popup-row"><span class="label">Nuevos Ingresos:</span><span class="value">${metaData.nuevo_ingreso.toLocaleString()}</span></div>
+                                <div class="popup-row"><span class="label">Meta:</span><span class="value">${metaData.meta.toLocaleString()}</span></div>
+                                <div class="popup-row"><span class="label">Niños:</span><span class="value">${metaData.pct_ninos}%</span></div>
+                                <div class="popup-row"><span class="label">Embarazadas:</span><span class="value">${metaData.pct_embarazadas}%</span></div>
+                            `;
+                        } else {
+                            popupContent += '<p>Sin datos</p>';
+                        }
+                        
+                        layer.bindPopup(popupContent);
+                    }
+                }).addTo(mapMetas);
+                
+                // Invalidate map size
+                mapMetas.invalidateSize();
+                
+            }, 100);
+        }
+
+        // Cargar regiones en el select de comparación
+        async function loadRegionComparacion() {
+            try {
+                const response = await fetch('/api/regiones');
+                const regiones = await response.json();
+                
+                const select = document.getElementById('region-comparacion');
+                select.innerHTML = '<option value="TODOS">Todas las Regiones</option>';
+                regiones.forEach(region => {
+                    select.innerHTML += `<option value="${region}">${region}</option>`;
+                });
+                
+                // Add event listener
+                select.addEventListener('change', loadComparacionAños);
+                
+            } catch (error) {
+                console.error('Error loading regions for comparison:', error);
+            }
+        }
+
+        // Load region comparison on page load
+        loadRegionComparacion();
+
+        // Initialize
+        async function init() {
+            generateRegionLegend();
+            await loadFilters();
+            await fetchData();
+        }
+
+        init();
+    </script>
+</body>
+</html>
