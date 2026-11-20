@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modo Presentación - Panel PANI</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            overflow: hidden;
+            background: var(--bg-primary);
+        }
+        
+        .presentation-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+        
+        .presentation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+            padding: 8px 15px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .presentation-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-shadow: 0 0 12px rgba(233, 69, 96, 0.5);
+        }
+        
+        .presentation-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .stop-btn {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            border: none;
+            color: white;
+            padding: 9px 20px;
+            border-radius: 7px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+        }
+        
+        .stop-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(231, 76, 60, 0.6);
+        }
+        
+        #pause-presentation {
+            background: linear-gradient(90deg, #f1c40f, #f39c12);
+            box-shadow: 0 5px 20px rgba(241, 196, 15, 0.4);
+        }
+        
+        #pause-presentation:hover {
+            box-shadow: 0 8px 30px rgba(241, 196, 15, 0.6);
+        }
+        
+        #pause-presentation.paused {
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+        }
+        
+        .progress-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+        }
+        
+        .progress-bar {
+            width: 140px;
+            height: 7px;
+            background: var(--input-bg);
+            border-radius: 3.5px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e94560, #0f3460);
+            border-radius: 5px;
+            transition: width 0.1s linear;
+        }
+        
+        .presentation-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 70% 30%;
+            gap: 10px;
+        }
+        
+        .map-section {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 8px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .country-totals {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .country-total-box {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.25), rgba(15, 52, 96, 0.25));
+            border: 2px solid rgba(233, 69, 96, 0.6);
+            border-radius: 10px;
+            padding: 8px 15px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.4), inset 0 0 15px rgba(233, 69, 96, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .country-total-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 30px rgba(233, 69, 96, 0.7), inset 0 0 20px rgba(233, 69, 96, 0.35);
+        }
+        
+        .country-total-box .label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+        
+        .country-total-box .value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-accent);
+            text-shadow: 0 0 15px rgba(233, 69, 96, 0.8);
+            line-height: 1.1;
+        }
+        
+        .map-wrapper {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            border-radius: 15px;
+            min-height: 0;
+        }
+        
+        #presentation-map {
+            height: 100%;
+            width: 100%;
+            border-radius: 15px;
+        }
+        
+        .region-info-panel {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            max-height: calc(100vh - 105px);
+        }
+        
+        .region-header {
+            text-align: center;
+            padding-bottom: 7px;
+            border-bottom: 2px solid rgba(233, 69, 96, 0.3);
+        }
+        
+        .region-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            text-shadow: 0 0 12px rgba(233, 69, 96, 0.5);
+            line-height: 1.1;
+        }
+        
+        .region-indicator {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            margin: 0 auto;
+            box-shadow: 0 0 12px currentColor;
+        }
+        
+        .stats-grid-presentation {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+        
+        .stat-box {
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            padding: 7px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .stat-box:hover {
+            background: var(--input-bg);
+            transform: translateY(-5px);
+        }
+        
+        .stat-box .label {
+            font-size: 0.55rem;
+            color: var(--text-secondary);
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+        
+        .stat-box .value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-accent);
+            line-height: 1.1;
+        }
+        
+        .stat-box.latino {
+            background: rgba(46, 204, 113, 0.15);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+        
+        .stat-box.latino .label { color: #2ecc71; }
+        .stat-box.latino .value { color: #2ecc71; }
+        
+        .stat-box.indigena {
+            background: rgba(155, 89, 182, 0.15);
+            border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+        
+        .stat-box.indigena .label { color: #9b59b6; }
+        .stat-box.indigena .value { color: #9b59b6; }
+        
+        .meta-section, .alert-section {
+            background: var(--bg-secondary);
+            border-radius: 7px;
+            padding: 7px;
+        }
+        
+        .meta-title {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            text-align: center;
+            line-height: 1.1;
+        }
+        
+        .meta-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .meta-item .meta-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+        
+        .meta-bar-container {
+            height: 14px;
+            background: var(--input-bg);
+            border-radius: 7px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .meta-bar-fill {
+            height: 100%;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.6rem;
+            color: var(--text-primary);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            transition: width 1s ease;
+        }
+        
+        .filter-indicator {
+            background: rgba(15, 52, 96, 0.85);
+            border: 1px solid rgba(233, 69, 96, 0.6);
+            padding: 7px 14px;
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            box-shadow: 0 0 12px rgba(233, 69, 96, 0.4);
+        }
+        
+        .countdown-timer {
+            position: absolute;
+            bottom: 9px;
+            right: 9px;
+            background: var(--text-accent);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            box-shadow: 0 0 12px rgba(233, 69, 96, 0.5);
+        }
+        
+        .bottom-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .nutrition-indicators {
+            background: var(--bg-secondary);
+            border-radius: 7px;
+            padding: 7px;
+        }
+        
+        .nutrition-title {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            text-align: center;
+            line-height: 1.1;
+        }
+        
+        .indicator-bar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 2px;
+            line-height: 1;
+        }
+        
+        .indicator-bar .label {
+            width: 70px;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            line-height: 1;
+        }
+        
+        .indicator-bar .bar {
+            flex: 1;
+            height: 11px;
+            background: var(--input-bg);
+            border-radius: 5.5px;
+            overflow: hidden;
+        }
+        
+        .indicator-bar .bar-fill {
+            height: 100%;
+            border-radius: 5.5px;
+            transition: width 0.5s ease;
+        }
+        
+        .indicator-bar .value {
+            width: 35px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: right;
+            line-height: 1;
+        }
+        
+        .meta-bar-fill.green { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+        .meta-bar-fill.yellow { background: linear-gradient(90deg, #f1c40f, #f39c12); }
+        .meta-bar-fill.red { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        
+        @media (max-width: 1200px) {
+            .presentation-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .region-info-panel {
+                max-height: 400px;
+                overflow-y: auto;
+            }
+        }
+        
+        [data-theme="light"] body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+        }
+        
+        [data-theme="light"] .presentation-title {
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        [data-theme="light"] .stat-box .value {
+            color: #c0392b;
+        }
+        
+        [data-theme="light"] .meta-title {
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation-container">
+        <div class="presentation-header">
+            <h1 class="presentation-title">MODO PRESENTACIÓN PANI</h1>
+            <div class="filter-indicator" id="filter-indicator">
+                Tipo: Niños/as | Población: Global | Año: TODOS | Mes: TODOS
+            </div>
+            <div class="presentation-controls">
+                <div class="progress-indicator">
+                    <span id="progress-text">Región 1 de 18</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill" style="width: 5%"></div>
+                    </div>
+                </div>
+                <button class="stop-btn" id="pause-presentation">
+                    PAUSAR PRESENTACIÓN
+                </button>
+                <button class="stop-btn" id="stop-presentation">
+                    DETENER PRESENTACIÓN
+                </button>
+            </div>
+        </div>
+        
+        <div class="presentation-content">
+            <div class="map-section">
+                <div class="country-totals" id="country-totals">
+                    <div class="country-total-box">
+                        <div class="label">Total País - Asistidos</div>
+                        <div class="value" id="stat-total-asistidos">0</div>
+                    </div>
+                    <div class="country-total-box">
+                        <div class="label">Total País - Seguimiento</div>
+                        <div class="value" id="stat-total-seguimiento">0</div>
+                    </div>
+                </div>
+                <div class="map-wrapper">
+                    <div id="presentation-map"></div>
+                    <div class="countdown-timer" id="countdown">5</div>
+                </div>
+            </div>
+            
+            <div class="region-info-panel">
+                <div class="region-header">
+                    <div class="region-indicator" id="region-color" style="background: #e94560;"></div>
+                    <div class="region-name" id="region-name">CONCEPCIÓN</div>
+                </div>
+                
+                <div class="stats-grid-presentation">
+                    <div class="stat-box">
+                        <div class="label">Región - Asistidos</div>
+                        <div class="value" id="stat-asistidos">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Región - Seguimiento</div>
+                        <div class="value" id="stat-seguimiento">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Finalizados</div>
+                        <div class="value" id="stat-finalizados">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Atrasos</div>
+                        <div class="value" id="stat-atrasos">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Deserciones</div>
+                        <div class="value" id="stat-deserciones">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Kilos Disponibles</div>
+                        <div class="value" id="stat-kilos" style="color: #27ae60;">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Ingresos Nuevos</div>
+                        <div class="value" id="stat-nuevos">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Traslados</div>
+                        <div class="value" id="stat-traslados">0</div>
+                    </div>
+                    <!-- Tarjetas de Latino (se ocultan cuando filtro = INDIGENA) -->
+                    <div class="stat-box latino" id="stat-box-latino">
+                        <div class="label">Latino</div>
+                        <div class="value" id="stat-latino">0</div>
+                    </div>
+                    <!-- Tarjetas de Indígena (se ocultan cuando filtro = LATINO) -->
+                    <div class="stat-box indigena" id="stat-box-indigena">
+                        <div class="label">Indígena</div>
+                        <div class="value" id="stat-indigena">0</div>
+                    </div>
+                </div>
+                
+                <div class="bottom-sections">
+                    <div class="meta-section">
+                        <div class="meta-title">Cumplimiento de Metas</div>
+                        <div class="meta-bars">
+                            <div class="meta-item" id="meta-item-ninos">
+                                <div class="meta-label">Niños/as</div>
+                                <div class="meta-bar-container">
+                                    <div class="meta-bar-fill green" id="meta-ninos-bar" style="width: 0%">0%</div>
+                                </div>
+                            </div>
+                            <div class="meta-item" id="meta-item-embarazadas">
+                                <div class="meta-label">Embarazadas</div>
+                                <div class="meta-bar-container">
+                                    <div class="meta-bar-fill green" id="meta-embarazadas-bar" style="width: 0%">0%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="nutrition-indicators">
+                        <div class="nutrition-group" id="group-ninos">
+                            <div class="nutrition-title">Indicadores Nutricionales - Niños/as</div>
+                            <div id="nutrition-bars-ninos">
+                                <div class="indicator-bar">
+                                    <span class="label">Desnutrición</span>
+                                    <div class="bar"><div class="bar-fill" id="bar-desnutricion-ninos" style="width: 0%; background: #e74c3c;"></div></div>
+                                    <span class="value" id="val-desnutricion-ninos">0</span>
+                                </div>
+                                <div class="indicator-bar">
+                                    <span class="label">Riesgo Desnutrición</span>
+                                    <div class="bar"><div class="bar-fill" id="bar-riesgo-ninos" style="width: 0%; background: #f39c12;"></div></div>
+                                    <span class="value" id="val-riesgo-ninos">0</span>
+                                </div>
+                                <div class="indicator-bar">
+                                    <span class="label">Adecuado</span>
+                                    <div class="bar"><div class="bar-fill" id="bar-adecuado-ninos" style="width: 0%; background: #27ae60;"></div></div>
+                                    <span class="value" id="val-adecuado-ninos">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="nutrition-group" id="group-embarazadas">
+                            <div class="nutrition-title" style="margin-top: 10px;">Indicadores Nutricionales - Embarazadas</div>
+                            <div id="nutrition-bars-embarazadas">
+                                <div class="indicator-bar">
+                                    <span class="label">Bajo Peso</span>
+                                    <div class="bar"><div class="bar-fill" id="bar-bajo-peso-embarazadas" style="width: 0%; background: #e74c3c;"></div></div>
+                                    <span class="value" id="val-bajo-peso-embarazadas">0</span>
+                                </div>
+                                <div class="indicator-bar">
+                                    <span class="label">Adecuado</span>
+                                    <div class="bar"><div class="bar-fill" id="bar-adecuado-embarazadas" style="width: 0%; background: #27ae60;"></div></div>
+                                    <span class="value" id="val-adecuado-embarazadas">0</span>
+                                </div>
+                                <div class="indicator-bar">
+                                    <span class="label">Sobrepeso</span>
+                                    <div class="bar"><div class="bar-fill" id="bar-sobrepeso-embarazadas" style="width: 0%; background: #f39c12;"></div></div>
+                                    <span class="value" id="val-sobrepeso-embarazadas">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="nutrition-group" id="group-ce">
+                            <div class="nutrition-title" style="margin-top: 10px;">Indicadores - Casos Excepcionales</div>
+                            <div id="nutrition-bars-ce">
+                                <div class="indicator-bar">
+                                    <span class="label">Nuevo Ingreso</span>
+                                    <div class="bar"><div class="bar-fill" id="bar-nuevo-ingreso-ce" style="width: 0%; background: #3498db;"></div></div>
+                                    <span class="value" id="val-nuevo-ingreso-ce">0</span>
+                                </div>
+                                <div class="indicator-bar">
+                                    <span class="label">Seguimiento</span>
+                                    <div class="bar"><div class="bar-fill" id="bar-seguimiento-ce" style="width: 0%; background: #f1c40f;"></div></div>
+                                    <span class="value" id="val-seguimiento-ce">0</span>
+                                </div>
+                                <div class="indicator-bar">
+                                    <span class="label">Finalizados</span>
+                                    <div class="bar"><div class="bar-fill" id="bar-finalizados-ce" style="width: 0%; background: #27ae60;"></div></div>
+                                    <span class="value" id="val-finalizados-ce">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="presentacion.js"></script>
+</body>
+</html>

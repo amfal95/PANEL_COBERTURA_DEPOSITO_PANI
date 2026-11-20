@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Cobertura - Paraguay</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="header">
+        <h1> Panel de Cobertura y Depósito </h1>
+        <p>Visualización de Datos de Cobertura y Depósito del Programa PANI </p>
+        <div class="header-actions">
+            <button id="theme-toggle" class="theme-toggle" title="Cambiar tema">
+                <span class="theme-icon">🌙</span>
+            </button>
+            <button id="toggle-labels" class="theme-toggle" title="Mostrar/Ocultar nombres de regiones">
+                <span class="labels-icon">🏷️</span>
+            </button>
+            <button id="generate-report" class="generate-report" title="Generar Informe PDF">
+                <span class="report-icon">📄</span>
+                GENERAR INFORME
+            </button>
+            <button id="start-presentation" class="start-presentation" title="Comenzar Presentación">
+                <span class="presentation-icon">▶️</span>
+                COMENZAR PRESENTACIÓN
+            </button>
+        </div>
+    </header>
+
+    <!-- Modal de configuración del informe -->
+    <div class="report-modal-overlay" id="report-modal">
+        <div class="report-modal">
+            <div class="report-modal-header">
+                <h2>📄 Configurar Informe PDF</h2>
+                <button class="report-modal-close" id="report-modal-close">&times;</button>
+            </div>
+            
+            <div class="report-modal-body">
+                <p class="report-modal-info">
+                    El informe se generará con los filtros actuales:
+                    <strong id="report-current-filters"></strong>
+                </p>
+                
+                <div class="report-options-grid">
+                    <div class="report-option-group">
+                        <h3>📊 Secciones del Informe</h3>
+                        
+                        <label class="report-checkbox">
+                            <input type="checkbox" id="chk-resumen" checked>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <strong>Resumen General</strong>
+                                <small>Totales generales del programa</small>
+                            </div>
+                        </label>
+                        
+                        <label class="report-checkbox">
+                            <input type="checkbox" id="chk-poblacion" checked>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <strong>Población Indígena / Latina</strong>
+                                <small>Desglose por población indígena y latina</small>
+                            </div>
+                        </label>
+                        
+                        <label class="report-checkbox">
+                            <input type="checkbox" id="chk-nutricional-ninos" checked>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <strong>Estado Nutricional - Niños/as</strong>
+                                <small>Desnutrición, Riesgo, Adecuado, Sobrepeso, Obesidad</small>
+                            </div>
+                        </label>
+                        
+                        <label class="report-checkbox">
+                            <input type="checkbox" id="chk-nutricional-embarazadas" checked>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <strong>Estado Nutricional - Embarazadas</strong>
+                                <small>Bajo Peso, Adecuado, Sobrepeso, Obesidad</small>
+                            </div>
+                        </label>
+                        
+                        <label class="report-checkbox">
+                            <input type="checkbox" id="chk-metas-ninos" checked>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <strong>Metas - Niños/as</strong>
+                                <small>Cumplimiento de metas de niños por región</small>
+                            </div>
+                        </label>
+                        
+                        <label class="report-checkbox">
+                            <input type="checkbox" id="chk-metas-embarazadas" checked>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <strong>Metas - Embarazadas</strong>
+                                <small>Cumplimiento de metas de embarazadas por región</small>
+                            </div>
+                        </label>
+                        
+                        <label class="report-checkbox">
+                            <input type="checkbox" id="chk-alertas" checked>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <strong>Indicadores de Alerta</strong>
+                                <small>Alertas semáforo: desnutrición, riesgo, atrasos</small>
+                            </div>
+                        </label>
+                        
+                        <label class="report-checkbox">
+                            <input type="checkbox" id="chk-totales-mensuales" checked>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <strong>Totales Mensuales</strong>
+                                <small>Asistidos por mes: Niños, Embarazadas, CE</small>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="report-option-group">
+                        <h3>📋 Detalle por Región</h3>
+                        
+                        <label class="report-checkbox">
+                            <input type="checkbox" id="chk-detalle-regiones" checked>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <strong>Incluir detalle por región</strong>
+                                <small>Tabla con datos desglosados por cada región sanitaria</small>
+                            </div>
+                        </label>
+                        
+                        <!-- Sub-opciones para columnas del detalle -->
+                        <div class="report-sub-options" id="detalle-columnas-options">
+                            <p class="sub-options-title">Columnas a incluir:</p>
+                            
+                            <label class="report-checkbox small">
+                                <input type="checkbox" id="col-total-asist" checked>
+                                <span class="checkmark"></span>
+                                <div class="checkbox-content">
+                                    <strong>Total Asist.</strong>
+                                </div>
+                            </label>
+                            
+                            <label class="report-checkbox small">
+                                <input type="checkbox" id="col-nuevos" checked>
+                                <span class="checkmark"></span>
+                                <div class="checkbox-content">
+                                    <strong>Nuevos</strong>
+                                </div>
+                            </label>
+                            
+                            <label class="report-checkbox small">
+                                <input type="checkbox" id="col-seguim" checked>
+                                <span class="checkmark"></span>
+                                <div class="checkbox-content">
+                                    <strong>Seguim.</strong>
+                                </div>
+                            </label>
+                            
+                            <label class="report-checkbox small">
+                                <input type="checkbox" id="col-finaliz" checked>
+                                <span class="checkmark"></span>
+                                <div class="checkbox-content">
+                                    <strong>Finaliz.</strong>
+                                </div>
+                            </label>
+                            
+                            <label class="report-checkbox small">
+                                <input type="checkbox" id="col-atrasos" checked>
+                                <span class="checkmark"></span>
+                                <div class="checkbox-content">
+                                    <strong>Atrasos</strong>
+                                </div>
+                            </label>
+                            
+                            <label class="report-checkbox small">
+                                <input type="checkbox" id="col-deserc" checked>
+                                <span class="checkmark"></span>
+                                <div class="checkbox-content">
+                                    <strong>Deserc.</strong>
+                                </div>
+                            </label>
+                            
+                            <label class="report-checkbox small">
+                                <input type="checkbox" id="col-t-salida" checked>
+                                <span class="checkmark"></span>
+                                <div class="checkbox-content">
+                                    <strong>T. Salida</strong>
+                                </div>
+                            </label>
+                            
+                            <label class="report-checkbox small">
+                                <input type="checkbox" id="col-t-entrada" checked>
+                                <span class="checkmark"></span>
+                                <div class="checkbox-content">
+                                    <strong>T. Entrada</strong>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="report-modal-footer">
+                <button class="btn-cancel" id="btn-cancel-report">Cancelar</button>
+                <button class="btn-generate" id="btn-generate-report">
+                    <span class="btn-icon">📥</span>
+                    Generar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="filters">
+                <h3>Filtros</h3>
+                
+                <div class="filter-group">
+                    <label for="tipo-dato">Tipo de Dato:</label>
+                    <select id="tipo-dato">
+                        <option value="todos">Total Pais</option>
+                        <option value="ninos">Niños/as</option>
+                        <option value="embarazadas">Embarazadas</option>
+                        <option value="ce">Casos Excepcionales</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="poblacion">Población:</label>
+                    <select id="poblacion">
+                        <option value="GLOBAL">Global (Latino + Indígena)</option>
+                        <option value="LATINO">Latino</option>
+                        <option value="INDIGENA">Indígena</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="año">Año:</label>
+                    <select id="año">
+                        <option value="TODOS">Todos los Años</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="mes">Mes:</label>
+                    <select id="mes">
+                        <option value="TODOS">Todos los Meses</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="region">Región:</label>
+                    <select id="region">
+                        <option value="TODOS">Todas las Regiones</option>
+                    </select>
+                </div>
+
+                <button id="clear-filters" style="width: 100%; padding: 10px; background: #e94560; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9rem; margin-top: 10px;">Limpiar Filtros</button>
+            </div>
+
+            <div class="filters" style="margin-top: 30px; border-top: 2px solid rgba(233, 69, 96, 0.3); padding-top: 20px;">
+                <h3>Análisis Comparativo</h3>
+                
+                <div class="analysis-menu">
+                    <button class="analysis-btn" data-panel="none">
+                        <span class="icon">🗺️</span>
+                        Vista Principal
+                    </button>
+                    <button class="analysis-btn" data-panel="regiones">
+                        <span class="icon">📊</span>
+                        Comparar Regiones
+                    </button>
+                    <button class="analysis-btn" data-panel="años">
+                        <span class="icon">📅</span>
+                        Comparar Años
+                    </button>
+                    <button class="analysis-btn" data-panel="alertas">
+                        <span class="icon">🚨</span>
+                        Alertas
+                    </button>
+                    <button class="analysis-btn" data-panel="metas">
+                        <span class="icon">🎯</span>
+                        Metas
+                    </button>
+                    <button class="analysis-btn" data-panel="nutricional">
+                        <span class="icon">🍎</span>
+                        Estado Nutricional
+                    </button>
+                </div>
+            </div>
+
+            <div class="legend">
+                <h4>Regiones Sanitarias</h4>
+                <div class="legend-scale" id="region-legend">
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <img src="LOGO INAN.png" alt="Logo INAN" style="max-width: 100%; height: auto; max-height: 80px;">
+                </div>
+            </div>
+        </aside>
+
+        <main class="map-container">
+            <div class="analysis-panel" id="panel-regiones">
+                <h3>Comparación entre Regiones</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Comparativa de todos los datos por región sanitaria</p>
+                
+                <div class="filters" style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <div class="filter-group">
+                        <label for="comparacion-año">Año:</label>
+                        <select id="comparacion-año">
+                            <option value="TODOS">Todos los Años</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="comparacion-mes">Mes:</label>
+                        <select id="comparacion-mes">
+                            <option value="TODOS">Todos los Meses</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="comparacion-tipo">Tipo de Dato:</label>
+                        <select id="comparacion-tipo">
+                            <option value="todos">Resumen (Todos)</option>
+                            <option value="ninos">Niños/as</option>
+                            <option value="embarazadas">Embarazadas</option>
+                            <option value="ce">Casos Excepcionales</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="comparacion-poblacion">Población:</label>
+                        <select id="comparacion-poblacion">
+                            <option value="GLOBAL">Global</option>
+                            <option value="LATINO">Latino</option>
+                            <option value="INDIGENA">Indígena</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="tabla-regiones">
+                    <div class="loading">Cargando datos...</div>
+                </div>
+            </div>
+
+            <div class="analysis-panel" id="panel-años">
+                <h3>Comparación entre Años</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Evolución de indicadores a lo largo de los años</p>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="region-comparacion">Región:</label>
+                    <select id="region-comparacion">
+                        <option value="TODOS">Todas las Regiones</option>
+                    </select>
+                </div>
+                <div id="tabla-años">
+                    <div class="loading">Cargando datos...</div>
+                </div>
+            </div>
+
+            <div class="analysis-panel" id="panel-alertas">
+                <h3>Indicadores de Alerta</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Mapa de alertas con efecto semáforo (Desnutrición, Riesgo de Desnutrición, Atrasos)</p>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="alertas-poblacion">Población:</label>
+                    <select id="alertas-poblacion">
+                        <option value="GLOBAL">Global</option>
+                        <option value="LATINO">Latino</option>
+                        <option value="INDIGENA">Indígena</option>
+                    </select>
+                </div>
+                <div id="map-alertas">
+                    <div class="map-zoom-control">
+                        <button class="map-zoom-btn" data-target="map-alertas" data-zoom="in" title="Acercar">+</button>
+                        <button class="map-zoom-btn" data-target="map-alertas" data-zoom="out" title="Alejar">−</button>
+                    </div>
+                    <button class="map-fullscreen-btn" data-target="map-alertas" title="Pantalla completa">⛶</button>
+                    <button class="map-basemap-btn" data-target="map-alertas" title="Ocultar mapa base">🗺️</button>
+                </div>
+                <div class="alert-legend">
+                    <div class="alert-legend-item">
+                        <span class="dot green"></span>
+                        <span>Nivel Bajo (Normal)</span>
+                    </div>
+                    <div class="alert-legend-item">
+                        <span class="dot yellow"></span>
+                        <span>Nivel Medio (Precaución)</span>
+                    </div>
+                    <div class="alert-legend-item">
+                        <span class="dot red"></span>
+                        <span>Nivel Alto (Alerta)</span>
+                    </div>
+                </div>
+                <div id="alertas-detalle" style="margin-top: 20px;">
+                    <div class="loading">Cargando alertas...</div>
+                </div>
+            </div>
+
+            <div class="analysis-panel" id="panel-metas">
+                <h3>Cumplimiento de Metas</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Mapa de cumplimiento de metas según porcentaje de Niños y Embarazadas</p>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="meta-año">Año:</label>
+                    <select id="meta-año">
+                        <option value="TODOS">Todos los Años</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="meta-mes">Mes:</label>
+                    <select id="meta-mes">
+                        <option value="TODOS">Todos los Meses</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="meta-tipo">Tipo de Meta:</label>
+                    <select id="meta-tipo">
+                        <option value="combinada">Niños + Embarazadas (Combinada)</option>
+                        <option value="ninos">Solo Niños</option>
+                        <option value="embarazadas">Solo Embarazadas</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="meta-poblacion">Población:</label>
+                    <select id="meta-poblacion">
+                        <option value="GLOBAL">Global</option>
+                        <option value="LATINO">Latino</option>
+                        <option value="INDIGENA">Indígena</option>
+                    </select>
+                </div>
+                <div id="map-metas">
+                    <div class="map-zoom-control">
+                        <button class="map-zoom-btn" data-target="map-metas" data-zoom="in" title="Acercar">+</button>
+                        <button class="map-zoom-btn" data-target="map-metas" data-zoom="out" title="Alejar">−</button>
+                    </div>
+                    <button class="map-fullscreen-btn" data-target="map-metas" title="Pantalla completa">⛶</button>
+                    <button class="map-basemap-btn" data-target="map-metas" title="Ocultar mapa base">🗺️</button>
+                </div>
+                <div class="alert-legend">
+                    <div class="alert-legend-item">
+                        <span class="dot green"></span>
+                        <span>80%+ (Meta Cumplida)</span>
+                    </div>
+                    <div class="alert-legend-item">
+                        <span class="dot yellow"></span>
+                        <span>60-79% (En Proceso)</span>
+                    </div>
+                    <div class="alert-legend-item">
+                        <span class="dot red"></span>
+                        <span>0-59% (Por Debajo de Meta)</span>
+                    </div>
+                </div>
+                <div id="metas-detalle" style="margin-top: 20px;">
+                    <div class="loading">Cargando metas...</div>
+                </div>
+            </div>
+
+            <div class="analysis-panel" id="panel-nutricional">
+                <h3>Análisis Nutricional Detallado</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Indicadores de salud para Niños y Embarazadas</p>
+                
+                <div class="filters" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 10px;">
+                    <div class="filter-group" style="margin-bottom: 0; min-width: 150px;">
+                        <label for="nutricional-tipo">Población:</label>
+                        <select id="nutricional-tipo">
+                            <option value="ambos">Ambos</option>
+                            <option value="ninos">Niños/as</option>
+                            <option value="embarazadas">Embarazadas</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="margin-bottom: 0; min-width: 150px;">
+                        <label for="nutricional-poblacion">Grupo Poblacional:</label>
+                        <select id="nutricional-poblacion">
+                            <option value="GLOBAL">Global</option>
+                            <option value="LATINO">Latino</option>
+                            <option value="INDIGENA">Indígena</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="margin-bottom: 0; min-width: 150px;">
+                        <label for="nutricional-año">Año:</label>
+                        <select id="nutricional-año">
+                            <option value="TODOS">Todos los Años</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="margin-bottom: 0; min-width: 150px;">
+                        <label for="nutricional-region">Región:</label>
+                        <select id="nutricional-region">
+                            <option value="TODOS">Todas las Regiones</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="nutricional-content">
+                    <div class="nutricional-section">
+                        <h4>Distribución General</h4>
+                        <p style="color: #aaa; font-size: 0.9rem;">Proporción de categorías nutricionales a nivel nacional/regional</p>
+                        <div style="position: relative; height: 300px; margin-top: 15px;">
+                            <canvas id="chart-distribucion"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="nutricional-section">
+                        <h4>Top 5 Regiones Críticas</h4>
+                        <p id="top5-label" style="color: #aaa; font-size: 0.9rem;">Regiones con mayor porcentaje de Desnutrición/Bajo Peso</p>
+                        <div style="position: relative; height: 300px; margin-top: 15px;">
+                            <canvas id="chart-top5"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="nutricional-section">
+                        <h4>Evolución de Indicadores</h4>
+                        <p style="color: #aaa; font-size: 0.9rem;">Evolución de todos los indicadores nutricionales</p>
+                        <div class="filter-group" style="margin: 15px 0; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <div>
+                                <label for="nutricional-modo">Ver por:</label>
+                                <select id="nutricional-modo">
+                                    <option value="anual">Año</option>
+                                    <option value="mensual">Meses</option>
+                                </select>
+                            </div>
+                            <div id="nutricional-año-container" style="display: none;">
+                                <label for="nutricional-año-evolucion">Año:</label>
+                                <select id="nutricional-año-evolucion">
+                                    <option value="TODOS">Todos</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="evolucion-anual-container" style="position: relative; height: 300px; margin-top: 15px;">
+                            <canvas id="chart-evolucion-anual"></canvas>
+                        </div>
+                        
+                        <div id="evolucion-mensual-container" style="position: relative; height: 300px; margin-top: 15px; display: none;">
+                            <canvas id="chart-evolucion-mensual"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="map">
+                <div class="map-zoom-control">
+                    <button class="map-zoom-btn" data-target="map" data-zoom="in" title="Acercar">+</button>
+                    <button class="map-zoom-btn" data-target="map" data-zoom="out" title="Alejar">−</button>
+                </div>
+                <button class="map-fullscreen-btn" data-target="map" title="Pantalla completa">⛶</button>
+                <button class="map-basemap-btn" data-target="map" title="Ocultar mapa base">🗺️</button>
+            </div>
+            
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card">
+                    <div class="label">Total Asistidos</div>
+                    <div class="value" id="total-asistidos">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Seguimiento</div>
+                    <div class="value" id="total-seguimiento">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Finalizados</div>
+                    <div class="value" id="total-finalizados">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Atrasos</div>
+                    <div class="value" id="total-atrasos">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Deserciones</div>
+                    <div class="value" id="total-deserciones">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Traslados Salida</div>
+                    <div class="value" id="t-salida">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Traslados Entrada</div>
+                    <div class="value" id="t-entrada">-</div>
+                </div>
+                <div class="stat-card" style="background: rgba(39, 174, 96, 0.15); border: 1px solid rgba(39, 174, 96, 0.3);">
+                    <div class="label" style="color: #27ae60;">Kilos Disponibles</div>
+                    <div class="value" style="color: #27ae60;" id="kilos-disponibles">-</div>
+                </div>
+                <div class="stat-card" style="background: rgba(52, 152, 219, 0.15); border: 1px solid rgba(52, 152, 219, 0.3);">
+                    <div class="label" style="color: #3498db;">Ingresos Nuevos</div>
+                    <div class="value" style="color: #3498db;" id="ingresos-nuevos">-</div>
+                </div>
+                <div class="stat-card" id="card-latino-total" style="background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.3);">
+                    <div class="label" style="color: #2ecc71;">Total Latino</div>
+                    <div class="value" style="color: #2ecc71;" id="total-latino">-</div>
+                </div>
+                <div class="stat-card" id="card-latino-nuevos" style="background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.2);">
+                    <div class="label" style="color: #2ecc71;">Latino Nuevos</div>
+                    <div class="value" style="color: #2ecc71; font-size: 1.2rem;" id="latino-nuevos">-</div>
+                </div>
+                <div class="stat-card" id="card-indigena-total" style="background: rgba(155, 89, 182, 0.15); border: 1px solid rgba(155, 89, 182, 0.3);">
+                    <div class="label" style="color: #9b59b6;">Total Indígena</div>
+                    <div class="value" style="color: #9b59b6;" id="total-indigena">-</div>
+                </div>
+                <div class="stat-card" id="card-indigena-nuevos" style="background: rgba(155, 89, 182, 0.1); border: 1px solid rgba(155, 89, 182, 0.2);">
+                    <div class="label" style="color: #9b59b6;">Indígena Nuevos</div>
+                    <div class="value" style="color: #9b59b6; font-size: 1.2rem;" id="indigena-nuevos">-</div>
+                </div>
+                <div class="stat-card meta-card ninos">
+                    <div class="label">% Meta Niños</div>
+                    <div class="value" id="meta-ninos">-</div>
+                </div>
+                <div class="stat-card meta-card embarazadas">
+                    <div class="label">% Meta Embarazadas</div>
+                    <div class="value" id="meta-embarazadas">-</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="region-card" id="region-card">
+        <div class="region-card-header">
+            <div class="region-card-title">
+                <span class="region-color" id="card-region-color"></span>
+                <span id="card-region-name">Región</span>
+            </div>
+            <button class="region-card-close" id="card-close">&times;</button>
+        </div>
+        
+        <div class="region-card-section">
+            <div class="region-card-section-title">Estadísticas Principales</div>
+            <div class="region-card-stats">
+                <div class="region-card-stat highlight">
+                    <span class="label">Total Asistidos</span>
+                    <span class="value" id="card-total-asistidos">0</span>
+                </div>
+                <div class="region-card-stat">
+                    <span class="label">Seguimiento</span>
+                    <span class="value" id="card-seguimiento">0</span>
+                </div>
+                <div class="region-card-stat">
+                    <span class="label">Finalizados</span>
+                    <span class="value" id="card-finalizados">0</span>
+                </div>
+                <div class="region-card-stat">
+                    <span class="label">Atrasos</span>
+                    <span class="value" id="card-atrasos">0</span>
+                </div>
+                <div class="region-card-stat">
+                    <span class="label">Deserciones</span>
+                    <span class="value" id="card-deserciones">0</span>
+                </div>
+                <div class="region-card-stat">
+                    <span class="label">Traslados</span>
+                    <span class="value" id="card-traslados">0</span>
+                </div>
+                <div class="region-card-stat" style="background: rgba(39, 174, 96, 0.2); border: 1px solid rgba(39, 174, 96, 0.3);">
+                    <span class="label" style="color: #27ae60;">Kilos Disponibles</span>
+                    <span class="value" style="color: #27ae60;" id="card-kilos">0</span>
+                </div>
+                <div class="region-card-stat" style="background: rgba(52, 152, 219, 0.2); border: 1px solid rgba(52, 152, 219, 0.3);">
+                    <span class="label" style="color: #3498db;">Ingresos Nuevos</span>
+                    <span class="value" style="color: #3498db;" id="card-nuevo-ingreso">0</span>
+                </div>
+                <div class="region-card-stat" id="card-latino-region" style="background: rgba(46, 204, 113, 0.2); border: 1px solid rgba(46, 204, 113, 0.3);">
+                    <span class="label" style="color: #2ecc71;">Latino</span>
+                    <span class="value" style="color: #2ecc71;" id="card-latino">0</span>
+                </div>
+                <div class="region-card-stat" id="card-indigena-region" style="background: rgba(155, 89, 182, 0.2); border: 1px solid rgba(155, 89, 182, 0.3);">
+                    <span class="label" style="color: #9b59b6;">Indígena</span>
+                    <span class="value" style="color: #9b59b6;" id="card-indigena">0</span>
+                </div>
+                <div class="region-card-stat meta-card-region ninos">
+                    <span class="label">% Meta Niños</span>
+                    <span class="value" id="card-meta-ninos">0%</span>
+                </div>
+                <div class="region-card-stat meta-card-region embarazadas">
+                    <span class="label">% Meta Embarazadas</span>
+                    <span class="value" id="card-meta-embarazadas">0%</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="region-card-section">
+            <div class="region-card-section-title">Indicadores Nutricionales</div>
+            <div id="card-indicators">
+            </div>
+        </div>
+    </div>
+
+    <!-- jsPDF para generación de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
+    <script src="reporte.js"></script>
+</body>
+</html>
